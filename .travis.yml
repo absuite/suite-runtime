@@ -1,0 +1,29 @@
+go_import_path: github.com/ggoop/gmf-db-proxy
+
+language: go
+go:
+  - 1.11
+
+os:
+  - windows
+
+script:
+  - go build
+
+after_success:
+  - go get github.com/spf13/viper
+  - go get github.com/denisenkom/go-mssqldb
+
+before_deploy:
+  - mkdir release
+  - GOARCH=386 GOOS=windows go build -o gmf-db-proxy.exe && zip release/gmf-db-proxy-windows-86.zip gmf-db-proxy.exe config.yaml
+  - GOARCH=amd64 GOOS=windows go build -o gmf-db-proxy.exe && zip release/gmf-db-proxy-windows-64.zip gmf-db-proxy.exe config.yaml
+deploy:
+  provider: releases
+  api_key: $GITHUB_TOKEN
+  file: 
+    - "release/gmf-db-proxy-windows-86.zip"
+    - "release/gmf-db-proxy-windows-64.zip"
+  skip_cleanup: true
+  on:
+    tags: true

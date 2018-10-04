@@ -1,0 +1,14 @@
+app:
+    name: 应用池
+    port: 8888
+db: 
+    host: 127.0.0.1
+    database: suite
+    username: root
+    password: root
+#db:
+#  host: 127.0.0.1
+#  port: 3306
+#  database: database
+#  username: username
+#  password: password
