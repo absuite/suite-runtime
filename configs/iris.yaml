@@ -3,7 +3,7 @@ app:
     port: 8888
 db: 
     host: 127.0.0.1
-    database: ambsuite
+    database: suite
     username: root
     password: root
 #db:
@@ -12,3 +12,9 @@ db:
 #  database: database
 #  username: username
 #  password: password
+DisablePathCorrection: false
+EnablePathEscape: false
+FireMethodNotAllowed: true
+DisableBodyConsumptionOnUnmarshal: true
+TimeFormat: Mon, 01 Jan 2006 15:04:05 GMT
+Charset: UTF-8

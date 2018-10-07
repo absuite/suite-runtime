@@ -12,7 +12,9 @@ script:
 
 after_success:
   - go get github.com/spf13/viper
-  - go get github.com/denisenkom/go-mssqldb
+  - go get github.com/go-xorm/xorm
+  - go get github.com/go-sql-driver/mysql
+  - go get github.com/kataras/iris
 
 before_deploy:
   - mkdir release
