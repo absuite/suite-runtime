@@ -7,13 +7,13 @@ import (
 	"github.com/absuite/suite-runtime/models/amiba"
 )
 
-func getFiData(m tmlModelingLine) []tmlDataElementing {
+func (s *modelSv) getFiData(m tmlModelingLine) []tmlDataElementing {
 	if m.Model.BizTypeEnum != "voucher" || m.Model.BizTypeEnum == "" {
 		return nil
 	}
 	fm_time = time.Now()
 	datas := make([]amibaModels.DataBiz, 0)
-	query := model_sv.repo.Select(` 
+	query := s.repo.Select(` 
 		d.doc_no,d.doc_date,d.biz_type,d.doc_type,
 		d.fm_org,d.fm_dept,d.fm_work,d.fm_team,d.fm_wh,d.fm_person,
 		d.trader,d.project,d.account,d.currency,d.debit_money,d.credit_money,
@@ -78,7 +78,7 @@ func getFiData(m tmlModelingLine) []tmlDataElementing {
 			DefFmGroupId: m.Model.GroupId, DefToGroupId: m.Model.ToGroupId, ElementId: m.Model.ElementId, BizTypeEnum: m.Model.BizTypeEnum,
 			ValueTypeEnum: m.Model.ValueTypeEnum, Adjust: m.Model.Adjust,
 			DataId: d.Id, DataType: "fi",
-			DataTrader: d.Trader, DataItemCode: d.Item, DataItemCategory: d.ItemCategory, DataProject: d.Project, DataAccount: d.Account, DataUom: d.Uom, DataCurrency: d.Currency,
+			DataTraderCode: d.Trader, DataItemCode: d.Item, DataItemCategoryCode: d.ItemCategory, DataProjectCode: d.Project, DataAccountCode: d.Account, DataUom: d.Uom, DataCurrency: d.Currency,
 			DataQty: d.Qty,
 		}
 		if m.Model.ValueTypeEnum == "debit" {
@@ -99,7 +99,7 @@ func getFiData(m tmlModelingLine) []tmlDataElementing {
 			tml.DataToTeam = d.ToTeam
 			tml.DataToPerson = d.ToPerson
 		}
-		model_sv_handTmlData(&tml, m)
+		s.model_sv_handTmlData(&tml, m)
 		if !tml.Deleted {
 			tmlDatas = append(tmlDatas, tml)
 		}

@@ -17,17 +17,14 @@ type modelSv struct {
 	repo *repositories.ModelRepo
 }
 
-var model_sv *modelSv
-
 func NewModelSv(repo *repositories.ModelRepo) ModelSv {
-	model_sv = &modelSv{repo: repo}
-	return model_sv
+	return &modelSv{repo: repo}
 }
 func (s *modelSv) Modeling(model amibaModels.Modeling) (bool, error) {
 
 	//获取期间数据
 	fm_time = time.Now()
-	period, f := model_sv_getPeriodData(model)
+	period, f := s.model_sv_getPeriodData(model)
 	if !f {
 		err := errors.New(fmt.Sprintf("找不到期间数据:%s", model.PeriodId))
 		log.Printf("period data error :%s", err)
@@ -37,7 +34,7 @@ func (s *modelSv) Modeling(model amibaModels.Modeling) (bool, error) {
 
 	//获取模型数据
 	fm_time = time.Now()
-	modelLines, f := model_sv_getModelsData(model)
+	modelLines, f := s.model_sv_getModelsData(model)
 	if !f || len(modelLines) == 0 {
 		err := errors.New(fmt.Sprintf("找不到模型数据:%s", model.ModelId))
 		log.Printf("model data error :%s", err)
@@ -47,7 +44,7 @@ func (s *modelSv) Modeling(model amibaModels.Modeling) (bool, error) {
 
 	//获取阿米巴数据
 	fm_time = time.Now()
-	groups, f := model_sv_getGroups(model)
+	groups, f := s.model_sv_getGroups(model)
 	if !f || len(groups) == 0 {
 		err := errors.New(fmt.Sprintf("找不到阿米巴数据:%s", model.PurposeId))
 		log.Printf("group data error :%s", err)
@@ -60,7 +57,7 @@ func (s *modelSv) Modeling(model amibaModels.Modeling) (bool, error) {
 	for _, v := range modelLines {
 		tmlModeling := tmlModelingLine{EntId: model.EntId, Period: period, Model: v, AllGroups: groups}
 
-		group, found := model_sv_getGroup(v.GroupId, groups)
+		group, found := s.model_sv_getGroup(v.GroupId, groups)
 		if !found {
 			err := errors.New(fmt.Sprintf("找不到阿米巴:%s", v.GroupId))
 			log.Printf("group data error :%s", err)
@@ -68,7 +65,7 @@ func (s *modelSv) Modeling(model amibaModels.Modeling) (bool, error) {
 		}
 		tmlModeling.Group = group
 
-		matchGroup, found := model_sv_getGroup(v.MatchGroupId, groups)
+		matchGroup, found := s.model_sv_getGroup(v.MatchGroupId, groups)
 		if !found {
 			err := errors.New(fmt.Sprintf("找不到匹配方阿米巴:%s", v.GroupId))
 			log.Printf("group data error :%s", err)
@@ -83,19 +80,20 @@ func (s *modelSv) Modeling(model amibaModels.Modeling) (bool, error) {
 		}
 
 		fm_time = time.Now()
-		tml := getBizData(tmlModeling)
+		tml := s.getBizData(tmlModeling)
 		if tml != nil && len(tml) > 0 {
 			tmlDatas = append(tmlDatas, tml...)
 		}
 		log.Printf("业务数据建模:%v条,time:%v Seconds", len(tml), time.Now().Sub(fm_time).Seconds())
 
 		fm_time = time.Now()
-		tml = getFiData(tmlModeling)
+		tml = s.getFiData(tmlModeling)
 		if tml != nil && len(tml) > 0 {
 			tmlDatas = append(tmlDatas, tml...)
 		}
 		log.Printf("财务数据建模:%v条,time:%v Seconds", len(tml), time.Now().Sub(fm_time).Seconds())
 	}
+	s.model_sv_savedoc(tmlDatas, model)
 	//获取业务数据
 	return true, nil
 }
