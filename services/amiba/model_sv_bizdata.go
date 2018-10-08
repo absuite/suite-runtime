@@ -14,13 +14,21 @@ func (s *modelSv) getBizData(m tmlModelingLine) []tmlDataElementing {
 	fm_time = time.Now()
 	datas := make([]amibaModels.DataBiz, 0)
 	query := s.repo.Select(` 
-		d.doc_no,d.doc_date,d.biz_type,d.doc_type,
+		max(d.doc_date) as doc_date,sum(d.qty) as qty,sum(d.money) as money,sum(d.tax) as tax,
+		d.biz_type,d.doc_type,
 		d.fm_org,d.fm_dept,d.fm_work,d.fm_team,d.fm_wh,d.fm_person,
 		d.to_org,d.to_dept,d.to_work,d.to_team,d.to_wh,d.to_person,
-		d.trader,d.item,d.item_category,d.project,d.currency,d.uom,d.qty,d.price,d.money,d.tax,
-		d.factor1,d.factor2,d.factor3,d.factor4,d.factor5
+		d.trader,d.item,d.item_category,d.project,d.currency,d.uom,
+		d.factor1,d.factor2,d.factor3,d.factor4,d.factor5		
 		`)
 	query.Table("suite_amiba_doc_bizs").Alias("d")
+	query.GroupBy(`
+		d.biz_type,d.doc_type,
+		d.fm_org,d.fm_dept,d.fm_work,d.fm_team,d.fm_wh,d.fm_person,
+		d.to_org,d.to_dept,d.to_work,d.to_team,d.to_wh,d.to_person,
+		d.trader,d.item,d.item_category,d.project,d.currency,d.uom,
+		d.factor1,d.factor2,d.factor3,d.factor4,d.factor5
+		`)
 	query.Where("d.ent_id=?", m.EntId).Where("d.doc_date between ? and ?", m.Period.FromDate.Format("2006-01-02"), m.Period.ToDate.Format("2006-01-02"))
 	//阿米巴条件过滤
 	if m.MatchGroup.Id != "" && len(m.MatchGroup.Datas) > 0 {

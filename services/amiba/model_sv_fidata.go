@@ -14,12 +14,19 @@ func (s *modelSv) getFiData(m tmlModelingLine) []tmlDataElementing {
 	fm_time = time.Now()
 	datas := make([]amibaModels.DataBiz, 0)
 	query := s.repo.Select(` 
-		d.doc_no,d.doc_date,d.biz_type,d.doc_type,
+		max(d.doc_date) as doc_date,sum(d.debit_money) as debit_money,sum(d.credit_money) as credit_money,
+		d.biz_type,d.doc_type,
 		d.fm_org,d.fm_dept,d.fm_work,d.fm_team,d.fm_wh,d.fm_person,
-		d.trader,d.project,d.account,d.currency,d.debit_money,d.credit_money,
-		d.factor1,d.factor2,d.factor3,d.factor4,d.factor5
+		d.trader,d.project,d.account,d.currency,
+		d.factor1,d.factor2,d.factor3,d.factor4,d.factor5		
 		`)
 	query.Table("suite_amiba_doc_fis").Alias("d")
+	query.GroupBy(`
+		d.biz_type,d.doc_type,
+		d.fm_org,d.fm_dept,d.fm_work,d.fm_team,d.fm_wh,d.fm_person,
+		d.trader,d.project,d.account,d.currency,
+		d.factor1,d.factor2,d.factor3,d.factor4,d.factor5		
+		`)
 	query.Where("d.ent_id=?", m.EntId).Where("d.doc_date between ? and ?", m.Period.FromDate.Format("2006-01-02"), m.Period.ToDate.Format("2006-01-02"))
 	//阿米巴条件过滤
 	if m.MatchGroup.Id != "" && len(m.MatchGroup.Datas) > 0 {
