@@ -7,7 +7,8 @@ import (
 	"time"
 
 	"github.com/absuite/suite-runtime/models/amiba"
-	"github.com/ggoop/goutils"
+	"github.com/ggoop/goutils/glog"
+	"github.com/ggoop/goutils/utils"
 )
 
 func (s *modelSv) model_sv_savedoc(items []tmlDataElementing, modeling amibaModels.Modeling) {
@@ -18,14 +19,14 @@ func (s *modelSv) model_sv_savedoc(items []tmlDataElementing, modeling amibaMode
 	WHERE h.src_type_enum=? AND h.ent_id=? AND h.purpose_id=? AND h.period_id=? AND h.modeling_id=?
 	`
 	if _, err := s.repo.Exec(sql, "interface", modeling.EntId, modeling.PurposeId, modeling.PeriodId, modeling.ModelId); err != nil {
-		goutils.CheckAndPrintError("delete suite_amiba_data_doc_lines error!", err)
+		glog.CheckAndPrintError("delete suite_amiba_data_doc_lines error!", err)
 	}
 	sql = `
 	DELETE h FROM suite_amiba_data_docs AS h
 	WHERE h.src_type_enum=? AND h.ent_id=? AND h.purpose_id=? AND h.period_id=? AND h.modeling_id=?
 	`
 	if _, err := s.repo.Exec(sql, "interface", modeling.EntId, modeling.PurposeId, modeling.PeriodId, modeling.ModelId); err != nil {
-		goutils.CheckAndPrintError("delete suite_amiba_data_docs error!", err)
+		glog.CheckAndPrintError("delete suite_amiba_data_docs error!", err)
 	}
 
 	log.Printf("删除上次建模数据:time:%v Seconds", time.Now().Sub(fm_time).Seconds())
@@ -60,8 +61,8 @@ func (s *modelSv) model_sv_savedoc(items []tmlDataElementing, modeling amibaMode
 			totalMoney += iv.Money
 			if ik == 0 {
 				doc = amibaModels.DataDoc{EntId: iv.EntId, ModelingId: iv.ModelingId, PurposeId: iv.PurposeId, PeriodId: iv.PeriodId, SrcTypeEnum: "interface"}
-				doc.Id = goutils.GUID()
-				doc.DocNo = time.Now().Format("060102") + goutils.NewStringInt(count).ToString()
+				doc.Id = utils.GUID()
+				doc.DocNo = time.Now().Format("060102") + utils.NewStringInt(count).ToString()
 				doc.DocDate = time.Now()
 				doc.FmGroupId = iv.FmGroupId
 				doc.ToGroupId = iv.ToGroupId
@@ -69,7 +70,7 @@ func (s *modelSv) model_sv_savedoc(items []tmlDataElementing, modeling amibaMode
 				doc.StateEnum = "approved"
 			}
 			docLine = amibaModels.DataDocLine{DocId: doc.Id, EntId: iv.EntId, ModelingId: iv.ModelingId, ModelingLineId: iv.ModelingLineId}
-			docLine.Id = goutils.GUID()
+			docLine.Id = utils.GUID()
 			docLine.Qty = iv.Qty
 			if iv.Qty != 0 {
 				docLine.Price = iv.Money / iv.Qty
@@ -97,7 +98,7 @@ func (s *modelSv) model_sv_savedoc(items []tmlDataElementing, modeling amibaMode
 		if count > 1000 {
 			_, err := s.repo.Table("suite_amiba_data_docs").Insert(&batchDocs)
 			if err != nil {
-				goutils.CheckAndPrintError("insert into docs error!", err)
+				glog.CheckAndPrintError("insert into docs error!", err)
 			}
 
 			batchDocs = make([]amibaModels.DataDoc, 0)
@@ -106,7 +107,7 @@ func (s *modelSv) model_sv_savedoc(items []tmlDataElementing, modeling amibaMode
 	if len(batchDocs) > 0 {
 		_, err := s.repo.Table("suite_amiba_data_docs").Insert(&batchDocs)
 		if err != nil {
-			goutils.CheckAndPrintError("insert into docs error!", err)
+			glog.CheckAndPrintError("insert into docs error!", err)
 		}
 	}
 	log.Printf("插入单据头数据:%v条,time:%v Seconds", len(dataDocs), time.Now().Sub(fm_time).Seconds())
@@ -121,7 +122,7 @@ func (s *modelSv) model_sv_savedoc(items []tmlDataElementing, modeling amibaMode
 		if count > 1000 {
 			_, err := s.repo.Table("suite_amiba_data_doc_lines").Insert(&batchDocLines)
 			if err != nil {
-				goutils.CheckAndPrintError("insert into docs error!", err)
+				glog.CheckAndPrintError("insert into docs error!", err)
 			}
 
 			batchDocLines = make([]amibaModels.DataDocLine, 0)
@@ -130,7 +131,7 @@ func (s *modelSv) model_sv_savedoc(items []tmlDataElementing, modeling amibaMode
 	if len(batchDocLines) > 0 {
 		_, err := s.repo.Table("suite_amiba_data_doc_lines").Insert(&batchDocLines)
 		if err != nil {
-			goutils.CheckAndPrintError("insert into docs error!", err)
+			glog.CheckAndPrintError("insert into docs error!", err)
 		}
 	}
 	log.Printf("插入单据行数据:%v条,time:%v Seconds", len(dataDocLines), time.Now().Sub(fm_time).Seconds())

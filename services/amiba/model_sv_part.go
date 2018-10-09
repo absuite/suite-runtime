@@ -1,8 +1,9 @@
 package amibaServices
 
 import (
-	"log"
 	"strconv"
+
+	"github.com/ggoop/goutils/glog"
 
 	"github.com/absuite/suite-runtime/models/amiba"
 	"github.com/absuite/suite-runtime/models/cbo"
@@ -77,14 +78,14 @@ func (s *modelSv) model_sv_handTmlData(d *tmlDataElementing, c tmlModelingLine) 
 	} else if d.ValueTypeEnum == "qty" {
 		if d.Qty == 0 {
 			d.Deleted = true
-			log.Printf("业务数据需要取价，将数量为0，被丢弃!")
+			glog.Printf("业务数据需要取价，将数量为0，被丢弃!")
 			return
 		}
 		/*如果取数量，则需要从价表里取单价*/
 		price, err := price_sv.GetPrice(PriceFind{EntId: d.EntId, PurposeId: d.PurposeId, FmGroupId: d.FmGroupId, ToGroupId: d.ToGroupId, ItemCode: d.DataItemCode, Date: d.DataDocDate})
 		if err != nil {
 			d.Deleted = true
-			log.Printf("find price:%s", err)
+			glog.Printf("find price:%s", err)
 			return
 		}
 		d.Price = price.CostPrice
@@ -98,14 +99,14 @@ func (s *modelSv) model_sv_handTmlData(d *tmlDataElementing, c tmlModelingLine) 
 		justValue, err := strconv.Atoi(d.Adjust)
 		if err != nil {
 			d.Deleted = true
-			log.Printf("模型调整错误，字符串转换成整数失败:%s", err)
+			glog.Printf("模型调整错误，字符串转换成整数失败:%s", err)
 			return
 		}
 		d.Money = d.Money * float64(justValue)
 	}
 	if d.Qty == 0 && d.Money == 0 {
 		d.Deleted = true
-		log.Printf("数量和金额同时为0，数据被丢弃!")
+		glog.Printf("数量和金额同时为0，数据被丢弃!")
 		return
 	}
 }
@@ -115,7 +116,7 @@ func (s *modelSv) model_sv_getPeriodData(model amibaModels.Modeling) (m cboModel
 	query.Join("inner", []string{"suite_cbo_period_accounts", "p"}, "c.id=p.calendar_id")
 	query.Where("p.id = ? ", model.PeriodId)
 	if _, err := query.Get(&m); err != nil {
-		log.Printf("query error :%s", err)
+		glog.Printf("query error :%s", err)
 		found = false
 	}
 	if m.Id != "" {
@@ -149,7 +150,7 @@ func (s *modelSv) model_sv_getGroups(model amibaModels.Modeling) (m []amibaModel
 	query.Where("g.purpose_id = ? and g.ent_id = ? ", model.PurposeId, model.EntId)
 	err := query.Find(&m)
 	if err != nil {
-		log.Printf("query error :%s", err)
+		glog.Printf("query error :%s", err)
 		found = false
 		return
 	}
@@ -179,7 +180,7 @@ func (s *modelSv) model_sv_getGroups(model amibaModels.Modeling) (m []amibaModel
 	}
 	err = query.Find(&groupData)
 	if err != nil {
-		log.Printf("query error :%s", err)
+		glog.Printf("query error :%s", err)
 		found = false
 		return
 	}
@@ -209,7 +210,7 @@ func (s *modelSv) model_sv_getModelsData(model amibaModels.Modeling) (m []amibaM
 	query.Join("left", []string{"suite_cbo_traders", "trader"}, "ml.trader_id=trader.id")
 	query.Where("m.id=?", model.ModelId)
 	if err := query.Find(&m); err != nil {
-		log.Printf("query error :%s", err)
+		glog.Printf("query error :%s", err)
 		found = false
 	}
 	if len(m) > 0 {

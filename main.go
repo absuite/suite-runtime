@@ -21,7 +21,6 @@ func main() {
 		appConfig.Port = "8080"
 	}
 	app := iris.New()
-	app.Logger().SetLevel("debug")
 
 	app.Use(recover.New())
 	app.Use(logger.New())

@@ -1,8 +1,9 @@
 package amibaServices
 
 import (
-	"log"
 	"time"
+
+	"github.com/ggoop/goutils/glog"
 
 	"github.com/absuite/suite-runtime/models/amiba"
 )
@@ -75,10 +76,10 @@ func (s *modelSv) getBizData(m tmlModelingLine) []tmlDataElementing {
 	}
 	err := query.Find(&datas)
 	if err != nil {
-		log.Printf("query error :%s", err)
+		glog.Printf("query error :%s", err)
 		return nil
 	}
-	log.Printf("查询业务数据:%v条,time:%v Seconds", len(datas), time.Now().Sub(fm_time).Seconds())
+	glog.Printf("查询业务数据:%v条,time:%v Seconds", len(datas), time.Now().Sub(fm_time).Seconds())
 
 	fm_time = time.Now()
 	tmlDatas := make([]tmlDataElementing, 0)
@@ -100,6 +101,6 @@ func (s *modelSv) getBizData(m tmlModelingLine) []tmlDataElementing {
 		}
 	}
 
-	log.Printf("处理业务数据,time:%v Seconds", time.Now().Sub(fm_time).Seconds())
+	glog.Printf("处理业务数据,time:%v Seconds", time.Now().Sub(fm_time).Seconds())
 	return tmlDatas
 }

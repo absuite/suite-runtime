@@ -3,8 +3,9 @@ package amibaServices
 import (
 	"errors"
 	"fmt"
-	"log"
 	"time"
+
+	"github.com/ggoop/goutils/glog"
 
 	"github.com/absuite/suite-runtime/models/amiba"
 	"github.com/absuite/suite-runtime/repositories"
@@ -127,7 +128,7 @@ func (s *priceSv) Cache(entId string, purposeId string) error {
 	query.Where("(p.disabled=0 or p.disabled is null)")
 	query.Desc("p.group_id").Desc("pl.item_id").Desc("pl.group_id").Desc("pl.fm_date")
 	if err := query.Find(&items); err != nil {
-		log.Printf("query error :%s", err)
+		glog.Printf("query error :%s", err)
 		return err
 	}
 	if items != nil && len(items) > 0 {
@@ -147,7 +148,7 @@ func (s *priceSv) Cache(entId string, purposeId string) error {
 	query.Where("(p.disabled=0 or p.disabled is null) and (ph.disabled=0 or ph.disabled is null)")
 	query.Desc("ph.group_id").Desc("pl.item_id").Desc("pl.group_id").Desc("pl.fm_date")
 	if err := query.Find(&items); err != nil {
-		log.Printf("query error :%s", err)
+		glog.Printf("query error :%s", err)
 		return err
 	}
 	if items != nil && len(items) > 0 {
