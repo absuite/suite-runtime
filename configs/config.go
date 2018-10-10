@@ -1,9 +1,8 @@
-package main
+package configs
 
 import (
 	"log"
 	"os"
-	"strings"
 
 	"github.com/spf13/viper"
 )
@@ -29,19 +28,19 @@ type ConnectionConfig struct {
 	Username string `mapstructure:"username"`
 	Password string `mapstructure:"password"`
 }
+type Config struct {
+	App AppConfig
+	Db  DbConfig
+}
 
 const cmdRoot = "config"
 
-var appConfig AppConfig
-var dbConfig DbConfig
+var Default Config
 
-func init() {
+func New() {
 	viper.SetConfigType("yaml")
-	viper.SetEnvPrefix(cmdRoot)
-	viper.AutomaticEnv()
-	replacer := strings.NewReplacer(".", "_")
-	viper.SetEnvKeyReplacer(replacer)
 	viper.SetConfigName(cmdRoot)
+	viper.AddConfigPath("./env")
 	viper.AddConfigPath("./")
 	err := viper.ReadInConfig()
 	if err != nil {
@@ -49,9 +48,8 @@ func init() {
 		os.Exit(1)
 	}
 
-	viper.UnmarshalKey("app", &appConfig)
-	if appConfig.Port == "" {
-		appConfig.Port = "8080"
+	viper.Unmarshal(&Default)
+	if Default.App.Port == "" {
+		Default.App.Port = "8080"
 	}
-	viper.UnmarshalKey("db", &dbConfig)
 }
