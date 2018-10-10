@@ -48,7 +48,10 @@ func handleDb(app *iris.Application) *xorm.Engine {
 		app.Logger().Fatalf("orm failed to initialized: %v", err)
 	}
 	location, err := time.LoadLocation("Asia/Shanghai")
-	orm.TZLocation = location
+	if err == nil {
+		orm.TZLocation = location
+	}
+
 	// orm.ShowSQL(true)
 	orm.Logger().SetLevel(core.LOG_DEBUG)
 	if err := orm.Ping(); err != nil {

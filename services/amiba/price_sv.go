@@ -14,6 +14,7 @@ import (
 type PricelSv interface {
 	Cache(entId string, purposeId string) error
 	GetPrice(find PriceFind) (amibaModels.Price, error)
+	CacheAll() error
 }
 type priceSv struct {
 	repo *repositories.ModelRepo
@@ -114,6 +115,18 @@ func (s *priceSv) getItemKey(FmGroupId string, ToGroupId string, ItemCode string
 	return fmt.Sprintf("%s:%s:%s", FmGroupId, ToGroupId, ItemCode)
 }
 func (s *priceSv) CacheAll() error {
+	items := make([]amibaModels.Purpose, 0)
+	query := price_sv.repo.Select(`p.id,p.code,p.name,p.ent_id,p.calendar_id`)
+	query.Table("suite_amiba_purposes").Alias("p")
+	if err := query.Find(&items); err != nil {
+		glog.Printf("query error :%s", err)
+		return err
+	}
+	if items != nil && len(items) > 0 {
+		for _, v := range items {
+			s.Cache(v.EntId, v.ID)
+		}
+	}
 	return nil
 }
 func (s *priceSv) Cache(entId string, purposeId string) error {
@@ -182,5 +195,7 @@ func (s *priceSv) Cache(entId string, purposeId string) error {
 		price_sv_cache[entId] = make(map[string]map[string][]amibaModels.Price)
 	}
 	price_sv_cache[entId][purposeId] = cacheItems
+
+	glog.Printf("缓存价表成功 %d 条：ent=%s,purpose=%s", len(datas), entId, purposeId)
 	return nil
 }

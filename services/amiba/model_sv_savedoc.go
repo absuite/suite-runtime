@@ -14,19 +14,39 @@ import (
 func (s *modelSv) model_sv_savedoc(items []tmlDataElementing, modeling amibaModels.Modeling) {
 	fm_time = time.Now()
 	var sql string
-	sql = `
-	DELETE l FROM suite_amiba_data_doc_lines AS l	INNER JOIN suite_amiba_data_docs AS h ON l.doc_id=h.id
-	WHERE h.src_type_enum=? AND h.ent_id=? AND h.purpose_id=? AND h.period_id=? AND h.modeling_id=?
-	`
-	if _, err := s.repo.Exec(sql, "interface", modeling.EntId, modeling.PurposeId, modeling.PeriodId, modeling.ModelId); err != nil {
-		glog.CheckAndPrintError("delete suite_amiba_data_doc_lines error!", err)
+	if modeling.ModelId != "" {
+		sql = `
+		DELETE l FROM suite_amiba_data_doc_lines AS l	INNER JOIN suite_amiba_data_docs AS h ON l.doc_id=h.id
+		WHERE h.src_type_enum=? AND h.ent_id=? AND h.purpose_id=? AND h.period_id=? AND h.modeling_id=?
+		`
+		if _, err := s.repo.Exec(sql, "interface", modeling.EntId, modeling.PurposeId, modeling.PeriodId, modeling.ModelId); err != nil {
+			glog.CheckAndPrintError("delete suite_amiba_data_doc_lines error!", err)
+		}
+	} else {
+		sql = `
+		DELETE l FROM suite_amiba_data_doc_lines AS l	INNER JOIN suite_amiba_data_docs AS h ON l.doc_id=h.id
+		WHERE h.src_type_enum=? AND h.ent_id=? AND h.purpose_id=? AND h.period_id=? 
+		`
+		if _, err := s.repo.Exec(sql, "interface", modeling.EntId, modeling.PurposeId, modeling.PeriodId); err != nil {
+			glog.CheckAndPrintError("delete suite_amiba_data_doc_lines error!", err)
+		}
 	}
-	sql = `
-	DELETE h FROM suite_amiba_data_docs AS h
-	WHERE h.src_type_enum=? AND h.ent_id=? AND h.purpose_id=? AND h.period_id=? AND h.modeling_id=?
-	`
-	if _, err := s.repo.Exec(sql, "interface", modeling.EntId, modeling.PurposeId, modeling.PeriodId, modeling.ModelId); err != nil {
-		glog.CheckAndPrintError("delete suite_amiba_data_docs error!", err)
+	if modeling.ModelId != "" {
+		sql = `
+		DELETE h FROM suite_amiba_data_docs AS h
+		WHERE h.src_type_enum=? AND h.ent_id=? AND h.purpose_id=? AND h.period_id=? AND h.modeling_id=?
+		`
+		if _, err := s.repo.Exec(sql, "interface", modeling.EntId, modeling.PurposeId, modeling.PeriodId, modeling.ModelId); err != nil {
+			glog.CheckAndPrintError("delete suite_amiba_data_docs error!", err)
+		}
+	} else {
+		sql = `
+		DELETE h FROM suite_amiba_data_docs AS h
+		WHERE h.src_type_enum=? AND h.ent_id=? AND h.purpose_id=? AND h.period_id=?
+		`
+		if _, err := s.repo.Exec(sql, "interface", modeling.EntId, modeling.PurposeId, modeling.PeriodId); err != nil {
+			glog.CheckAndPrintError("delete suite_amiba_data_docs error!", err)
+		}
 	}
 
 	log.Printf("删除上次建模数据:time:%v Seconds", time.Now().Sub(fm_time).Seconds())

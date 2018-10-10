@@ -2,10 +2,12 @@ package amibaControllers
 
 import (
 	"errors"
+	"time"
 
 	"github.com/absuite/suite-runtime/models/amiba"
 	"github.com/absuite/suite-runtime/results"
 	"github.com/absuite/suite-runtime/services/amiba"
+	"github.com/ggoop/goutils/glog"
 	"github.com/kataras/iris"
 )
 
@@ -22,6 +24,22 @@ type ModelController struct {
 	Service amibaServices.ModelSv
 }
 
+func (c *ModelController) GetModelingTest() results.Result {
+	fm_time := time.Now()
+	m := amibaModels.Modeling{}
+	m.EntId = c.Ctx.URLParam("ent")
+	m.PurposeId = c.Ctx.URLParam("purpose")
+	m.PeriodId = c.Ctx.URLParam("period")
+	m.ModelId = c.Ctx.URLParam("model")
+	_, err := c.Service.Modeling(m)
+
+	glog.Printf("建模:%s,time:%v Seconds", m, time.Now().Sub(fm_time).Seconds())
+	if err != nil {
+		return results.ToError(err)
+	} else {
+		return results.ToJson(results.Map{"data": true, "times": time.Now().Sub(fm_time).Seconds()})
+	}
+}
 func (c *ModelController) PostModeling() results.Result {
 	var m modelModling
 	if err := c.Ctx.ReadJSON(&m); err != nil {
@@ -43,7 +61,7 @@ func (c *ModelController) PostModeling() results.Result {
 				}
 			}
 		}
-	} else {
+	} else if m.PeriodIds != nil && len(m.PeriodIds) > 0 {
 		for _, periodId := range m.PeriodIds {
 			res, err := c.Service.Modeling(amibaModels.Modeling{EntId: entId, PurposeId: m.PurposeId, PeriodId: periodId})
 			if err != nil {

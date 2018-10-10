@@ -51,7 +51,7 @@ func (s *modelSv) Modeling(model amibaModels.Modeling) (bool, error) {
 		glog.Printf("group data error :%s", err)
 		return false, err
 	}
-	glog.Printf("获取模型数据:%v条,time:%v Seconds", len(groups), time.Now().Sub(fm_time).Seconds())
+	glog.Printf("获取阿米巴数据:%v条,time:%v Seconds", len(groups), time.Now().Sub(fm_time).Seconds())
 
 	//获取业务数据
 	tmlDatas := make([]tmlDataElementing, 0)

@@ -208,7 +208,12 @@ func (s *modelSv) model_sv_getModelsData(model amibaModels.Modeling) (m []amibaM
 	query.Join("left", []string{"suite_cbo_items", "item"}, "ml.item_id=item.id")
 	query.Join("left", []string{"suite_cbo_item_categories", "itemc"}, "itemc.id=ml.item_category_id")
 	query.Join("left", []string{"suite_cbo_traders", "trader"}, "ml.trader_id=trader.id")
-	query.Where("m.id=?", model.ModelId)
+	if model.ModelId != "" {
+		query.Where("m.id=?", model.ModelId)
+	}
+	if model.EntId != "" {
+		query.Where("m.ent_id=?", model.EntId)
+	}
 	if err := query.Find(&m); err != nil {
 		glog.Printf("query error :%s", err)
 		found = false
