@@ -113,6 +113,9 @@ func (s *priceSv) GetCache(entId string, purposeId string) map[string][]amibaMod
 func (s *priceSv) getItemKey(FmGroupId string, ToGroupId string, ItemCode string) string {
 	return fmt.Sprintf("%s:%s:%s", FmGroupId, ToGroupId, ItemCode)
 }
+func (s *priceSv) CacheAll() error {
+	return nil
+}
 func (s *priceSv) Cache(entId string, purposeId string) error {
 	datas := make([]amibaModels.Price, 0)
 
