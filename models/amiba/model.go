@@ -1,10 +1,22 @@
 package amibaModels
 
 type Model struct {
+	Id        string `xorm:"varchar(200) 'id'"`
+	Code      string `xorm:"varchar(200) 'code'"`
+	Name      string `xorm:"varchar(200) 'name'"`
+	PurposeId string `xorm:"varchar(200) 'purpose_id'"`
+	GroupId   string `xorm:"varchar(200) 'group_id'"`
+
+	Lines []ModelLine
+}
+
+func (s *Model) AddLine(item ModelLine) {
+	s.Lines = append(s.Lines, item)
+}
+
+type ModelLine struct {
 	Id                 string `xorm:"varchar(200) 'id'"`
-	LineId             string `xorm:"varchar(200) 'line_id'"`
-	Code               string `xorm:"varchar(200) 'code'"`
-	Name               string `xorm:"varchar(200) 'name'"`
+	ModelId            string `xorm:"varchar(200) 'model_id'"`
 	PurposeId          string `xorm:"varchar(200) 'purpose_id'"`
 	GroupId            string `xorm:"varchar(200) 'group_id'"`
 	ElementId          string `xorm:"varchar(200) 'element_id'"`

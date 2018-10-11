@@ -9,7 +9,7 @@ import (
 )
 
 func (s *modelSv) getBizData(m tmlModelingLine) []tmlDataElementing {
-	if m.Model.BizTypeEnum == "voucher" || m.Model.BizTypeEnum == "" {
+	if m.ModelLine.BizTypeEnum == "voucher" || m.ModelLine.BizTypeEnum == "" {
 		return nil
 	}
 	fm_time = time.Now()
@@ -35,44 +35,44 @@ func (s *modelSv) getBizData(m tmlModelingLine) []tmlDataElementing {
 	if m.MatchGroup.Id != "" && len(m.MatchGroup.Datas) > 0 {
 		switch m.MatchGroup.TypeEnum {
 		case "org":
-			query.In("d."+m.Model.MatchDirectionEnum+"_org", m.MatchGroup.GetDataCodes())
+			query.In("d."+m.ModelLine.MatchDirectionEnum+"_org", m.MatchGroup.GetDataCodes())
 		case "dept":
-			query.In("d."+m.Model.MatchDirectionEnum+"_dept", m.MatchGroup.GetDataCodes())
+			query.In("d."+m.ModelLine.MatchDirectionEnum+"_dept", m.MatchGroup.GetDataCodes())
 		case "work":
-			query.In("d."+m.Model.MatchDirectionEnum+"_work", m.MatchGroup.GetDataCodes())
+			query.In("d."+m.ModelLine.MatchDirectionEnum+"_work", m.MatchGroup.GetDataCodes())
 		}
 	}
 	//模型条件过滤
-	query.Where("d.biz_type=?", m.Model.BizTypeEnum)
-	if m.Model.DocTypeCode != "" {
-		query.Where("d.doc_type=?", m.Model.DocTypeCode)
+	query.Where("d.biz_type=?", m.ModelLine.BizTypeEnum)
+	if m.ModelLine.DocTypeCode != "" {
+		query.Where("d.doc_type=?", m.ModelLine.DocTypeCode)
 	}
-	if m.Model.ItemCategoryCode != "" {
-		query.Where("d.item_category=?", m.Model.ItemCategoryCode)
+	if m.ModelLine.ItemCategoryCode != "" {
+		query.Where("d.item_category=?", m.ModelLine.ItemCategoryCode)
 	}
-	if m.Model.ItemCode != "" {
-		query.Where("d.item=?", m.Model.ItemCode)
+	if m.ModelLine.ItemCode != "" {
+		query.Where("d.item=?", m.ModelLine.ItemCode)
 	}
-	if m.Model.TraderCode != "" {
-		query.Where("d.trader=?", m.Model.TraderCode)
+	if m.ModelLine.TraderCode != "" {
+		query.Where("d.trader=?", m.ModelLine.TraderCode)
 	}
-	if m.Model.ProjectCode != "" {
-		query.Where("d.project=?", m.Model.ProjectCode)
+	if m.ModelLine.ProjectCode != "" {
+		query.Where("d.project=?", m.ModelLine.ProjectCode)
 	}
-	if m.Model.Factor1 != "" {
-		query.Where("d.factor1=?", m.Model.Factor1)
+	if m.ModelLine.Factor1 != "" {
+		query.Where("d.factor1=?", m.ModelLine.Factor1)
 	}
-	if m.Model.Factor2 != "" {
-		query.Where("d.factor2=?", m.Model.Factor2)
+	if m.ModelLine.Factor2 != "" {
+		query.Where("d.factor2=?", m.ModelLine.Factor2)
 	}
-	if m.Model.Factor3 != "" {
-		query.Where("d.factor3=?", m.Model.Factor3)
+	if m.ModelLine.Factor3 != "" {
+		query.Where("d.factor3=?", m.ModelLine.Factor3)
 	}
-	if m.Model.Factor4 != "" {
-		query.Where("d.factor4=?", m.Model.Factor4)
+	if m.ModelLine.Factor4 != "" {
+		query.Where("d.factor4=?", m.ModelLine.Factor4)
 	}
-	if m.Model.Factor5 != "" {
-		query.Where("d.factor5=?", m.Model.Factor5)
+	if m.ModelLine.Factor5 != "" {
+		query.Where("d.factor5=?", m.ModelLine.Factor5)
 	}
 	err := query.Find(&datas)
 	if err != nil {
@@ -85,10 +85,10 @@ func (s *modelSv) getBizData(m tmlModelingLine) []tmlDataElementing {
 	tmlDatas := make([]tmlDataElementing, 0)
 	for _, d := range datas {
 		tml := tmlDataElementing{
-			EntId: m.EntId, PeriodId: m.Period.Id, PurposeId: m.Model.PurposeId,
-			ModelingId: m.Model.Id, ModelingLineId: m.Model.LineId, MatchDirectionEnum: m.Model.MatchDirectionEnum, MatchGroupId: m.Model.MatchGroupId,
-			DefFmGroupId: m.Model.GroupId, DefToGroupId: m.Model.ToGroupId, ElementId: m.Model.ElementId, BizTypeEnum: m.Model.BizTypeEnum,
-			ValueTypeEnum: m.Model.ValueTypeEnum, Adjust: m.Model.Adjust,
+			EntId: m.EntId, PeriodId: m.Period.Id, PurposeId: m.ModelLine.PurposeId,
+			ModelingId: m.ModelLine.ModelId, ModelingLineId: m.ModelLine.Id, MatchDirectionEnum: m.ModelLine.MatchDirectionEnum, MatchGroupId: m.ModelLine.MatchGroupId,
+			DefFmGroupId: m.ModelLine.GroupId, DefToGroupId: m.ModelLine.ToGroupId, ElementId: m.ModelLine.ElementId, BizTypeEnum: m.ModelLine.BizTypeEnum,
+			ValueTypeEnum: m.ModelLine.ValueTypeEnum, Adjust: m.ModelLine.Adjust,
 			DataId: d.Id, DataType: "biz",
 			DataFmOrg: d.FmOrg, DataFmDept: d.FmDept, DataFmWork: d.FmWork, DataFmTeam: d.FmTeam, DataFmPerson: d.FmPerson,
 			DataToOrg: d.ToOrg, DataToDept: d.ToDept, DataToWork: d.ToWork, DataToTeam: d.ToTeam, DataToPerson: d.ToPerson,

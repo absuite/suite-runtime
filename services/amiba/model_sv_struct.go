@@ -10,7 +10,7 @@ import (
 type tmlModelingLine struct {
 	EntId      string
 	Period     cboModels.Period
-	Model      amibaModels.Model
+	ModelLine  amibaModels.ModelLine
 	Group      amibaModels.Group
 	MatchGroup amibaModels.Group
 	AllGroups  []amibaModels.Group

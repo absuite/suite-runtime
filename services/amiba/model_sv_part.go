@@ -111,20 +111,21 @@ func (s *modelSv) model_sv_handTmlData(d *tmlDataElementing, c tmlModelingLine) 
 	}
 }
 
-func (s *modelSv) model_sv_getPeriodData(model amibaModels.Modeling) (m cboModels.Period, found bool) {
+func (s *modelSv) model_sv_getPeriodData(model amibaModels.Modeling) (cboModels.Period, bool) {
+	m := cboModels.Period{}
 	query := s.repo.Select("c.type_enum,c.id as calendar_id,p.id,p.code,p.name,p.year,p.from_date,p.to_date").Table("suite_cbo_period_calendars").Alias("c")
 	query.Join("inner", []string{"suite_cbo_period_accounts", "p"}, "c.id=p.calendar_id")
 	query.Where("p.id = ? ", model.PeriodId)
 	if _, err := query.Get(&m); err != nil {
 		glog.Printf("query error :%s", err)
-		found = false
+		return m, false
 	}
-	if m.Id != "" {
-		found = true
+	if m.Id == "" {
+		return m, false
 	}
-	return
+	return m, true
 }
-func (s *modelSv) model_sv_getGroupByLineCode(code string, groups []amibaModels.Group) (m amibaModels.Group, found bool) {
+func (s *modelSv) model_sv_getGroupByLineCode(code string, groups []amibaModels.Group) (amibaModels.Group, bool) {
 	for _, g := range groups {
 		if g.Datas == nil || len(g.Datas) == 0 {
 			continue
@@ -135,70 +136,86 @@ func (s *modelSv) model_sv_getGroupByLineCode(code string, groups []amibaModels.
 			}
 		}
 	}
-	return
+	return amibaModels.Group{}, false
 }
-func (s *modelSv) model_sv_getGroup(groupId string, groups []amibaModels.Group) (m amibaModels.Group, found bool) {
+func (s *modelSv) model_sv_getGroup(groupId string, groups []amibaModels.Group) (amibaModels.Group, bool) {
 	for _, g := range groups {
 		if g.Id == groupId {
 			return g, true
 		}
 	}
-	return
+	return amibaModels.Group{}, false
 }
-func (s *modelSv) model_sv_getGroups(model amibaModels.Modeling) (m []amibaModels.Group, found bool) {
+func (s *modelSv) model_sv_getGroups(model amibaModels.Modeling) ([]amibaModels.Group, error) {
+	groups := make([]amibaModels.Group, 0)
 	query := s.repo.Select("g.id,g.code,g.name,g.type_enum").Table("suite_amiba_groups").Alias("g")
 	query.Where("g.purpose_id = ? and g.ent_id = ? ", model.PurposeId, model.EntId)
-	err := query.Find(&m)
-	if err != nil {
+	if err := query.Find(&groups); err != nil {
 		glog.Printf("query error :%s", err)
-		found = false
-		return
+		return nil, err
 	}
-	if len(m) == 0 {
-		found = false
-		return
+	if len(groups) == 0 {
+		return groups, nil
 	}
-	groupType := "org"
-	for _, g := range m {
-		if g.TypeEnum != "" {
-			groupType = g.TypeEnum
-			break
-		}
-	}
-	found = true
 	groupData := make([]amibaModels.GroupData, 0)
+	groupDataItem := make([]amibaModels.GroupData, 0)
+
 	query = s.repo.Select("g.id as group_id,g.type_enum as type_enum,d.id,d.code,d.name").Table("suite_amiba_groups").Alias("g")
 	query.Join("inner", []string{"suite_amiba_group_lines", "gl"}, "g.id=gl.group_id")
-
-	switch groupType {
-	case "org":
-		query.Join("inner", []string{"suite_cbo_orgs", "d"}, "gl.data_id=d.id")
-	case "dept":
-		query.Join("inner", []string{"suite_cbo_depts", "d"}, "gl.data_id=d.id")
-	case "work":
-		query.Join("inner", []string{"suite_cbo_works", "d"}, "gl.data_id=d.id")
+	query.Join("inner", []string{"suite_cbo_orgs", "d"}, "gl.data_id=d.id").Where("g.type_enum=?", "org")
+	err = query.Find(&groupDataItem)
+	if err == nil && len(groupDataItem) > 0 {
+		groupData = append(groupData, groupDataItem...)
 	}
-	err = query.Find(&groupData)
-	if err != nil {
-		glog.Printf("query error :%s", err)
-		found = false
-		return
+
+	query = s.repo.Select("g.id as group_id,g.type_enum as type_enum,d.id,d.code,d.name").Table("suite_amiba_groups").Alias("g")
+	query.Join("inner", []string{"suite_amiba_group_lines", "gl"}, "g.id=gl.group_id")
+	query.Join("inner", []string{"suite_cbo_depts", "d"}, "gl.data_id=d.id").Where("g.type_enum=?", "dept")
+	err = query.Find(&groupDataItem)
+	if err == nil && len(groupDataItem) > 0 {
+		groupData = append(groupData, groupDataItem...)
+	}
+
+	query = s.repo.Select("g.id as group_id,g.type_enum as type_enum,d.id,d.code,d.name").Table("suite_amiba_groups").Alias("g")
+	query.Join("inner", []string{"suite_amiba_group_lines", "gl"}, "g.id=gl.group_id")
+	query.Join("inner", []string{"suite_cbo_works", "d"}, "gl.data_id=d.id").Where("g.type_enum=?", "work")
+	err = query.Find(&groupDataItem)
+	if err == nil && len(groupDataItem) > 0 {
+		groupData = append(groupData, groupDataItem...)
 	}
 	if len(groupData) > 0 {
-		for gi, gv := range m {
+		for gi, gv := range groups {
 			for vi, vv := range groupData {
 				if gv.Id == vv.GroupId {
-					m[gi].AddData(groupData[vi])
-					break
+					groups[gi].AddData(vv)
 				}
 			}
 		}
 	}
-	return
+	return groups, nil
 }
-func (s *modelSv) model_sv_getModelsData(model amibaModels.Modeling) (m []amibaModels.Model, found bool) {
-	query := s.repo.Select(`m.id,m.code,m.name,m.purpose_id,m.group_id,
-		ml.id as line_id,ml.element_id,ml.match_direction_enum,ml.match_group_id,
+func (s *modelSv) model_sv_getModelsData(model amibaModels.Modeling) ([]amibaModels.Model, error) {
+	results := make([]amibaModels.Model, 0)
+	query := s.repo.Select(`m.id,m.code,m.name,m.purpose_id,m.group_id`).Table("suite_amiba_modelings").Alias("m")
+	if model.ModelId != "" {
+		query.Where("m.id=?", model.ModelId)
+	}
+	if model.PurposeId != "" {
+		query.Where("m.purpose_id=?", model.PurposeId)
+	}
+	if model.EntId != "" {
+		query.Where("m.ent_id=?", model.EntId)
+	}
+	if err := query.Find(&results); err != nil {
+		glog.Printf("query error :%s", err)
+		return nil, err
+	}
+	if len(results) == 0 {
+		return results, nil
+	}
+	resultLines := make([]amibaModels.ModelLine, 0)
+	query = s.repo.Select(`m.id as model_id,m.purpose_id,m.group_id,
+		ml.id as id,ml.element_id,ml.match_direction_enum,ml.match_group_id,
 		ml.biz_type_enum,ml.doc_type_id,ml.item_category_id,itemc.code as item_category_code,
 		ml.account_code,ml.project_code,
 		ml.trader_id,trader.code as trader_code,ml.item_id,item.code as item_code,ml.factor1,ml.factor2,ml.factor3,ml.factor4,ml.factor5,
@@ -211,15 +228,24 @@ func (s *modelSv) model_sv_getModelsData(model amibaModels.Modeling) (m []amibaM
 	if model.ModelId != "" {
 		query.Where("m.id=?", model.ModelId)
 	}
+	if model.PurposeId != "" {
+		query.Where("m.purpose_id=?", model.PurposeId)
+	}
 	if model.EntId != "" {
 		query.Where("m.ent_id=?", model.EntId)
 	}
-	if err := query.Find(&m); err != nil {
+	if err := query.Find(&resultLines); err != nil {
 		glog.Printf("query error :%s", err)
-		found = false
+		return nil, err
 	}
-	if len(m) > 0 {
-		found = true
+	if len(resultLines) > 0 {
+		for i, item := range results {
+			for li, lv := range resultLines {
+				if lv.ModelId == item.Id {
+					results[i].AddLine(lv)
+				}
+			}
+		}
 	}
-	return
+	return results, nil
 }

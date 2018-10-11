@@ -59,7 +59,6 @@ func (s *modelSv) model_sv_savedoc(items []tmlDataElementing, modeling amibaMode
 	groups := make(map[string][]tmlDataElementing)
 	groupKey := ""
 	for _, item := range items {
-		//MD5(CONCAT(modeling_id,purpose_id,period_id,IFNULL(m_fm_group_id,''),IFNULL(m_to_group_id,''),IFNULL(use_type_enum,''),IFNULL(element_id,'')))
 		groupKey = fmt.Sprintf("%x", md5.Sum([]byte(fmt.Sprintf("%s:%s:%s:%s:%s", item.ModelingId, item.PurposeId, item.FmGroupId, item.ToGroupId, item.ElementId))))
 		if groups[groupKey] == nil {
 			groups[groupKey] = make([]tmlDataElementing, 0)
