@@ -3,23 +3,24 @@ package amibaServices
 import (
 	"crypto/md5"
 	"fmt"
-	"log"
 	"time"
+
+	"github.com/absuite/suite-runtime/models/cbo"
 
 	"github.com/absuite/suite-runtime/models/amiba"
 	"github.com/ggoop/goutils/glog"
 	"github.com/ggoop/goutils/utils"
 )
 
-func (s *modelSv) model_sv_savedoc(items []tmlDataElementing, modeling amibaModels.Modeling) {
+func (s *modelSv) Savedoc(ent cboModels.Ent, purpose amibaModels.Purpose, period cboModels.Period, items []tmlDataElementing, m amibaModels.Model) {
 	fm_time = time.Now()
 	var sql string
-	if modeling.ModelId != "" {
+	if m.Id != "" {
 		sql = `
 		DELETE l FROM suite_amiba_data_doc_lines AS l	INNER JOIN suite_amiba_data_docs AS h ON l.doc_id=h.id
 		WHERE h.src_type_enum=? AND h.ent_id=? AND h.purpose_id=? AND h.period_id=? AND h.modeling_id=?
 		`
-		if _, err := s.repo.Exec(sql, "interface", modeling.EntId, modeling.PurposeId, modeling.PeriodId, modeling.ModelId); err != nil {
+		if _, err := s.repo.Exec(sql, "interface", ent.Id, m.PurposeId, period.Id, m.Id); err != nil {
 			glog.CheckAndPrintError("delete suite_amiba_data_doc_lines error!", err)
 		}
 	} else {
@@ -27,16 +28,16 @@ func (s *modelSv) model_sv_savedoc(items []tmlDataElementing, modeling amibaMode
 		DELETE l FROM suite_amiba_data_doc_lines AS l	INNER JOIN suite_amiba_data_docs AS h ON l.doc_id=h.id
 		WHERE h.src_type_enum=? AND h.ent_id=? AND h.purpose_id=? AND h.period_id=? 
 		`
-		if _, err := s.repo.Exec(sql, "interface", modeling.EntId, modeling.PurposeId, modeling.PeriodId); err != nil {
+		if _, err := s.repo.Exec(sql, "interface", ent.Id, m.PurposeId, period.Id); err != nil {
 			glog.CheckAndPrintError("delete suite_amiba_data_doc_lines error!", err)
 		}
 	}
-	if modeling.ModelId != "" {
+	if m.Id != "" {
 		sql = `
 		DELETE h FROM suite_amiba_data_docs AS h
 		WHERE h.src_type_enum=? AND h.ent_id=? AND h.purpose_id=? AND h.period_id=? AND h.modeling_id=?
 		`
-		if _, err := s.repo.Exec(sql, "interface", modeling.EntId, modeling.PurposeId, modeling.PeriodId, modeling.ModelId); err != nil {
+		if _, err := s.repo.Exec(sql, "interface", ent.Id, m.PurposeId, period.Id, m.Id); err != nil {
 			glog.CheckAndPrintError("delete suite_amiba_data_docs error!", err)
 		}
 	} else {
@@ -44,12 +45,11 @@ func (s *modelSv) model_sv_savedoc(items []tmlDataElementing, modeling amibaMode
 		DELETE h FROM suite_amiba_data_docs AS h
 		WHERE h.src_type_enum=? AND h.ent_id=? AND h.purpose_id=? AND h.period_id=?
 		`
-		if _, err := s.repo.Exec(sql, "interface", modeling.EntId, modeling.PurposeId, modeling.PeriodId); err != nil {
+		if _, err := s.repo.Exec(sql, "interface", ent.Id, m.PurposeId, period.Id); err != nil {
 			glog.CheckAndPrintError("delete suite_amiba_data_docs error!", err)
 		}
 	}
-
-	log.Printf("删除上次建模数据:time:%v Seconds", time.Now().Sub(fm_time).Seconds())
+	glog.Printf("企业:%v,核算:%v,模型:%v,期间:%v,删除上次建模数据,time:%v Seconds", ent.Name, purpose.Name, m.Name, period.Name, time.Now().Sub(fm_time).Seconds())
 
 	if items == nil || len(items) == 0 {
 		return
@@ -106,7 +106,8 @@ func (s *modelSv) model_sv_savedoc(items []tmlDataElementing, modeling amibaMode
 		doc.Money = totalMoney
 		dataDocs = append(dataDocs, doc)
 	}
-	log.Printf("处理数据分组完成:原始数据%v条,time:%v Seconds", len(groups), time.Now().Sub(fm_time).Seconds())
+	glog.Printf("企业:%v,核算:%v,模型:%v,期间:%v,处理数据分组完成:原始数据%v条,time:%v Seconds", ent.Name, purpose.Name, m.Name, period.Name, len(groups), time.Now().Sub(fm_time).Seconds())
+
 	//分批插入头
 	fm_time = time.Now()
 	batchDocs := make([]amibaModels.DataDoc, 0)
@@ -129,7 +130,7 @@ func (s *modelSv) model_sv_savedoc(items []tmlDataElementing, modeling amibaMode
 			glog.CheckAndPrintError("insert into docs error!", err)
 		}
 	}
-	log.Printf("插入单据头数据:%v条,time:%v Seconds", len(dataDocs), time.Now().Sub(fm_time).Seconds())
+	glog.Printf("企业:%v,核算:%v,模型:%v,期间:%v,插入单据头数据:%v条,time:%v Seconds", ent.Name, purpose.Name, m.Name, period.Name, len(dataDocs), time.Now().Sub(fm_time).Seconds())
 
 	//分批插入行
 	fm_time = time.Now()
@@ -153,5 +154,6 @@ func (s *modelSv) model_sv_savedoc(items []tmlDataElementing, modeling amibaMode
 			glog.CheckAndPrintError("insert into docs error!", err)
 		}
 	}
-	log.Printf("插入单据行数据:%v条,time:%v Seconds", len(dataDocLines), time.Now().Sub(fm_time).Seconds())
+	glog.Printf("企业:%v,核算:%v,模型:%v,期间:%v,插入单据行数据:%v条,time:%v Seconds", ent.Name, purpose.Name, m.Name, period.Name, len(dataDocLines), time.Now().Sub(fm_time).Seconds())
+
 }

@@ -3,7 +3,7 @@ package amibaModels
 import "time"
 
 type DataDoc struct {
-	Id    string `xorm:"varchar(200) 'id'"`
+	Id    string `xorm:"pk varchar(200) 'id'"`
 	EntId string `xorm:"varchar(200) 'ent_id'"`
 
 	DocNo       string    `xorm:"varchar(200) 'doc_no'"`

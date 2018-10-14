@@ -5,14 +5,19 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/absuite/suite-runtime/models/amiba"
+	"github.com/absuite/suite-runtime/models/cbo"
+
 	"github.com/ggoop/goutils/glog"
 
-	"github.com/absuite/suite-runtime/models/amiba"
 	"github.com/absuite/suite-runtime/repositories"
 )
 
 type ModelSv interface {
-	Modeling(model amibaModels.Modeling) (bool, error)
+	Modeling(ent cboModels.Ent, purpose amibaModels.Purpose, period cboModels.Period, modelIds []string) (bool, error)
+	GetPurpose(entId, purposeId string) (amibaModels.Purpose, bool)
+	GetPeriod(entId, periodId string) (cboModels.Period, bool)
+	GetEnt(entId string) (cboModels.Ent, bool)
 }
 type modelSv struct {
 	repo *repositories.ModelRepo
@@ -21,84 +26,92 @@ type modelSv struct {
 func NewModelSv(repo *repositories.ModelRepo) ModelSv {
 	return &modelSv{repo: repo}
 }
-func (s *modelSv) Modeling(model amibaModels.Modeling) (bool, error) {
 
+func (s *modelSv) Modeling(ent cboModels.Ent, purpose amibaModels.Purpose, period cboModels.Period, modelIds []string) (bool, error) {
 	//获取期间数据
 	fm_time = time.Now()
-	period, f := s.model_sv_getPeriodData(model)
-	if !f {
-		err := errors.New(fmt.Sprintf("找不到期间数据:%s", model.PeriodId))
-		glog.Printf("period data error :%s", err)
-		return false, err
-	}
-	glog.Printf("获取期间数据,time:%v Seconds", time.Now().Sub(fm_time).Seconds())
-
 	//获取模型数据
 	fm_time = time.Now()
-	models, err := s.model_sv_getModelsData(model)
+	models, f := s.GetModels(ent.Id, purpose.ID, modelIds)
 	if !f || len(models) == 0 {
-		err := errors.New(fmt.Sprintf("找不到模型数据:%s", model.ModelId))
+		err := errors.New(fmt.Sprintf("企业:%v,核算:%v,期间:%v,找不到模型数据,%v", ent.Name, purpose.Name, period.Name, modelIds))
 		glog.Printf("model data error :%s", err)
 		return false, err
 	}
-	glog.Printf("获取模型数据:%v条,time:%v Seconds", len(models), time.Now().Sub(fm_time).Seconds())
+	glog.Printf("企业:%v,核算:%v,期间:%v,取得模型数据=%v条,time:%v Seconds", ent.Name, purpose.Name, period.Name, len(models), time.Now().Sub(fm_time).Seconds())
+	for _, m := range models {
+		s.DtiLog_Init(ent, purpose, period, m.Id)
 
-	//获取阿米巴数据
-	fm_time = time.Now()
-	groups, err := s.model_sv_getGroups(model)
-	if err != nil || len(groups) == 0 {
-		err := errors.New(fmt.Sprintf("找不到阿米巴数据:%s", model.PurposeId))
-		glog.Printf("group data error :%s", err)
-		return false, err
+		//删除取价日志
+		sql := "delete from `suite_amiba_dti_modeling_prices` where ent_id=? and purpose_id=? and period_id=? and model_id=?"
+		if _, err := s.repo.Exec(sql, ent.Id, purpose.ID, period.Id, m.Id); err != nil {
+			glog.Printf("企业:%v,核算:%v,期间:%v,删除取价日志错误:%s", ent.Name, purpose.Name, period.Name, err)
+		}
 	}
-	glog.Printf("获取阿米巴数据:%v条,time:%v Seconds", len(groups), time.Now().Sub(fm_time).Seconds())
 
-	for _, v := range models {
+	for _, m := range models {
 		//获取业务数据
 		tmlDatas := make([]tmlDataElementing, 0)
-		if v.Lines == nil || len(v.Lines) == 0 {
+		if m.Lines == nil || len(m.Lines) == 0 {
 			continue
 		}
-		for _, ml := range v.Lines {
-			tmlModeling := tmlModelingLine{EntId: model.EntId, Period: period, ModelLine: ml, AllGroups: groups}
+		fm_time2 := time.Now()
+		log := ""
+		s.DtiLog_Begin(ent, purpose, period, m.Id)
 
-			group, found := s.model_sv_getGroup(v.GroupId, groups)
-			if !found {
-				err := errors.New(fmt.Sprintf("找不到阿米巴:%s", v.GroupId))
+		glog.Printf("企业:%v,核算:%v,模型:%v,开始业务数据和财务数据建模...", ent.Name, purpose.Name, m.Name)
+		for _, ml := range m.Lines {
+			if ml.MatchGroupId == "" {
+				err := errors.New(fmt.Sprintf("企业:%v,核算:%v,模型:%v,行:%v,找不到匹配方阿米巴:%s", ent.Name, purpose.Name, m.Name, ml.Id, ml.MatchGroupId))
 				glog.Printf("group data error :%s", err)
+				s.DtiLog_Error(ent, purpose, period, m.Id, err)
 				return false, err
 			}
-			tmlModeling.Group = group
 
-			matchGroup, found := s.model_sv_getGroup(ml.MatchGroupId, groups)
-			if !found {
-				err := errors.New(fmt.Sprintf("找不到匹配方阿米巴:%s", v.GroupId))
+			if ml.MatchGroup.Datas == nil && len(ml.MatchGroup.Datas) == 0 {
+				err := errors.New(fmt.Sprintf("企业:%v,核算:%v,模型:%v,匹配方巴:%v,必须是末级，且需要有明细构成", ent.Name, purpose.Name, m.Name, ml.MatchGroup.Name))
 				glog.Printf("group data error :%s", err)
+				s.DtiLog_Error(ent, purpose, period, m.Id, err)
 				return false, err
-			} else {
-				if matchGroup.Datas == nil && len(matchGroup.Datas) == 0 {
-					err := errors.New(fmt.Sprintf("匹配方巴必须是末级，且需要有明细构成:%s", matchGroup.Name))
-					glog.Printf("group data error :%s", err)
-					return false, err
-				}
-				tmlModeling.MatchGroup = matchGroup
 			}
 
 			fm_time = time.Now()
-			tml := s.getBizData(tmlModeling)
+			tml, err := s.getBizData(ent, purpose, period, ml)
+			if err != nil {
+				glog.Error("获取业务数据建模错误：", err)
+				s.DtiLog_Error(ent, purpose, period, m.Id, err)
+				break
+			}
 			if tml != nil && len(tml) > 0 {
 				tmlDatas = append(tmlDatas, tml...)
 			}
-			glog.Printf("业务数据建模:%v条,time:%v Seconds", len(tml), time.Now().Sub(fm_time).Seconds())
-
+			log = fmt.Sprintf("企业:%v,核算:%v,模型:%v,业务数据建模:%v条,time:%v Seconds", ent.Name, purpose.Name, m.Name, len(tml), time.Now().Sub(fm_time).Seconds())
+			glog.Printf(log)
+			s.DtiLog_Log(ent, purpose, period, m.Id, log)
 			fm_time = time.Now()
-			tml = s.getFiData(tmlModeling)
+			tml, err = s.getFiData(ent, purpose, period, ml)
+			if err != nil {
+				glog.Error("获取财务数据建模错误：", err)
+				s.DtiLog_Error(ent, purpose, period, m.Id, err)
+				break
+			}
 			if tml != nil && len(tml) > 0 {
 				tmlDatas = append(tmlDatas, tml...)
 			}
-			glog.Printf("财务数据建模:%v条,time:%v Seconds", len(tml), time.Now().Sub(fm_time).Seconds())
+			log = fmt.Sprintf("企业:%v,核算:%v,模型:%v,财务数据建模:%v条,time:%v Seconds", ent.Name, purpose.Name, m.Name, len(tml), time.Now().Sub(fm_time).Seconds())
+			glog.Printf(log)
+			s.DtiLog_Log(ent, purpose, period, m.Id, log)
 		}
-		s.model_sv_savedoc(tmlDatas, model)
+		log = fmt.Sprintf("企业:%v,核算:%v,模型:%v,数据建模完成:%v条,time:%v Seconds", ent.Name, purpose.Name, m.Name, len(tmlDatas), time.Now().Sub(fm_time2).Seconds())
+		glog.Printf(log)
+		s.DtiLog_Log(ent, purpose, period, m.Id, log)
+		//保存单据
+		s.Savedoc(ent, purpose, period, tmlDatas, m)
+		log = fmt.Sprintf("企业:%v,核算:%v,模型:%v,保存单据完成,time:%v Seconds", ent.Name, purpose.Name, m.Name, time.Now().Sub(fm_time2).Seconds())
+		glog.Printf(log)
+		s.DtiLog_Log(ent, purpose, period, m.Id, log)
+
+		s.DtiLog_Success(ent, purpose, period, m.Id)
 	}
 	//获取业务数据
 	return true, nil

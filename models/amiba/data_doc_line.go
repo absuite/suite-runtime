@@ -4,7 +4,7 @@ import "time"
 
 type DataDocLine struct {
 	DocId string `xorm:"varchar(200) 'doc_id'"`
-	Id    string `xorm:"varchar(200) 'id'"`
+	Id    string `xorm:"pk varchar(200) 'id'"`
 	EntId string `xorm:"varchar(200) 'ent_id'"`
 
 	TraderId       string  `xorm:"varchar(200) 'trader_id'"`

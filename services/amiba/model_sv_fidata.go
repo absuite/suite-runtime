@@ -3,14 +3,16 @@ package amibaServices
 import (
 	"time"
 
+	"github.com/absuite/suite-runtime/models/cbo"
+
 	"github.com/ggoop/goutils/glog"
 
 	"github.com/absuite/suite-runtime/models/amiba"
 )
 
-func (s *modelSv) getFiData(m tmlModelingLine) []tmlDataElementing {
-	if m.Model.BizTypeEnum != "voucher" || m.Model.BizTypeEnum == "" {
-		return nil
+func (s *modelSv) getFiData(ent cboModels.Ent, purpose amibaModels.Purpose, period cboModels.Period, m amibaModels.ModelLine) ([]tmlDataElementing, error) {
+	if m.BizTypeEnum != "voucher" || m.BizTypeEnum == "" {
+		return nil, nil
 	}
 	fm_time = time.Now()
 	datas := make([]amibaModels.DataBiz, 0)
@@ -28,7 +30,7 @@ func (s *modelSv) getFiData(m tmlModelingLine) []tmlDataElementing {
 		d.trader,d.project,d.account,d.currency,
 		d.factor1,d.factor2,d.factor3,d.factor4,d.factor5		
 		`)
-	query.Where("d.ent_id=?", m.EntId).Where("d.doc_date between ? and ?", m.Period.FromDate.Format("2006-01-02"), m.Period.ToDate.Format("2006-01-02"))
+	query.Where("d.ent_id=?", ent.Id).Where("d.doc_date between ? and ?", period.FromDate.Format("2006-01-02"), period.ToDate.Format("2006-01-02"))
 	//阿米巴条件过滤
 	if m.MatchGroup.Id != "" && len(m.MatchGroup.Datas) > 0 {
 		switch m.MatchGroup.TypeEnum {
@@ -41,60 +43,59 @@ func (s *modelSv) getFiData(m tmlModelingLine) []tmlDataElementing {
 		}
 	}
 	//模型条件过滤
-	query.Where("d.biz_type=?", m.Model.BizTypeEnum)
-	if m.Model.DocTypeCode != "" {
-		query.Where("d.doc_type=?", m.Model.DocTypeCode)
+	query.Where("d.biz_type=?", m.BizTypeEnum)
+	if m.DocTypeCode != "" {
+		query.Where("d.doc_type=?", m.DocTypeCode)
 	}
-	if m.Model.AccountCode != "" {
-		query.Where("d.account=?", m.Model.AccountCode)
+	if m.AccountCode != "" {
+		query.Where("d.account=?", m.AccountCode)
 	}
-	if m.Model.TraderCode != "" {
-		query.Where("d.trader=?", m.Model.TraderCode)
+	if m.TraderCode != "" {
+		query.Where("d.trader=?", m.TraderCode)
 	}
-	if m.Model.ProjectCode != "" {
-		query.Where("d.project=?", m.Model.ProjectCode)
+	if m.ProjectCode != "" {
+		query.Where("d.project=?", m.ProjectCode)
 	}
-	if m.Model.Factor1 != "" {
-		query.Where("d.factor1=?", m.Model.Factor1)
+	if m.Factor1 != "" {
+		query.Where("d.factor1=?", m.Factor1)
 	}
-	if m.Model.Factor2 != "" {
-		query.Where("d.factor2=?", m.Model.Factor2)
+	if m.Factor2 != "" {
+		query.Where("d.factor2=?", m.Factor2)
 	}
-	if m.Model.Factor3 != "" {
-		query.Where("d.factor3=?", m.Model.Factor3)
+	if m.Factor3 != "" {
+		query.Where("d.factor3=?", m.Factor3)
 	}
-	if m.Model.Factor4 != "" {
-		query.Where("d.factor4=?", m.Model.Factor4)
+	if m.Factor4 != "" {
+		query.Where("d.factor4=?", m.Factor4)
 	}
-	if m.Model.Factor5 != "" {
-		query.Where("d.factor5=?", m.Model.Factor5)
+	if m.Factor5 != "" {
+		query.Where("d.factor5=?", m.Factor5)
 	}
 	err := query.Find(&datas)
 	if err != nil {
 		glog.Printf("query error :%s", err)
-		return nil
+		return nil, err
 	}
-
-	glog.Printf("查询财务数据:%v条,time:%v Seconds", len(datas), time.Now().Sub(fm_time).Seconds())
+	glog.Printf("企业:%v,核算:%v,模型:%v,期间:%v,查询财务数据:%v条,time:%v Seconds", ent.Name, purpose.Name, m.Id, period.Name, len(datas), time.Now().Sub(fm_time).Seconds())
 
 	fm_time = time.Now()
 	tmlDatas := make([]tmlDataElementing, 0)
 	for _, d := range datas {
 		tml := tmlDataElementing{
-			EntId: m.EntId, PeriodId: m.Period.Id, PurposeId: m.Model.PurposeId,
-			ModelingId: m.Model.Id, ModelingLineId: m.Model.LineId, MatchDirectionEnum: m.Model.MatchDirectionEnum, MatchGroupId: m.Model.MatchGroupId,
-			DefFmGroupId: m.Model.GroupId, DefToGroupId: m.Model.ToGroupId, ElementId: m.Model.ElementId, BizTypeEnum: m.Model.BizTypeEnum,
-			ValueTypeEnum: m.Model.ValueTypeEnum, Adjust: m.Model.Adjust,
+			EntId: ent.Id, PeriodId: period.Id, PurposeId: m.PurposeId,
+			ModelingId: m.ModelId, ModelingLineId: m.Id, MatchDirectionEnum: m.MatchDirectionEnum, MatchGroupId: m.MatchGroupId,
+			DefFmGroupId: m.GroupId, DefToGroupId: m.ToGroupId, ElementId: m.ElementId, BizTypeEnum: m.BizTypeEnum,
+			ValueTypeEnum: m.ValueTypeEnum, Adjust: m.Adjust,
 			DataId: d.Id, DataType: "fi",
 			DataTraderCode: d.Trader, DataItemCode: d.Item, DataItemCategoryCode: d.ItemCategory, DataProjectCode: d.Project, DataAccountCode: d.Account, DataUom: d.Uom, DataCurrency: d.Currency,
 			DataQty: d.Qty,
 		}
-		if m.Model.ValueTypeEnum == "debit" {
+		if m.ValueTypeEnum == "debit" {
 			tml.DataMoney = d.DebitMoney
 		} else {
 			tml.DataMoney = d.CreditMoney
 		}
-		if m.Model.MatchDirectionEnum == "fm" {
+		if m.MatchDirectionEnum == "fm" {
 			tml.DataFmOrg = d.FmOrg
 			tml.DataFmDept = d.FmDept
 			tml.DataFmWork = d.FmWork
@@ -107,12 +108,14 @@ func (s *modelSv) getFiData(m tmlModelingLine) []tmlDataElementing {
 			tml.DataToTeam = d.ToTeam
 			tml.DataToPerson = d.ToPerson
 		}
-		s.model_sv_handTmlData(&tml, m)
+		if err := s.model_sv_handTmlData(ent, purpose, period, &tml, m); err != nil {
+			return nil, err
+		}
 		if !tml.Deleted {
 			tmlDatas = append(tmlDatas, tml)
 		}
 	}
+	glog.Printf("企业:%v,核算:%v,模型:%v,期间:%v,处理财务数据:%v条,time:%v Seconds", ent.Name, purpose.Name, m.Id, period.Name, len(tmlDatas), time.Now().Sub(fm_time).Seconds())
 
-	glog.Printf("处理财务数据,time:%v Seconds", time.Now().Sub(fm_time).Seconds())
-	return tmlDatas
+	return tmlDatas, nil
 }

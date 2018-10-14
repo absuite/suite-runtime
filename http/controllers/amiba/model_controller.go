@@ -2,16 +2,17 @@ package amibaControllers
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
-	"github.com/absuite/suite-runtime/models/amiba"
 	"github.com/absuite/suite-runtime/results"
 	"github.com/absuite/suite-runtime/services/amiba"
 	"github.com/ggoop/goutils/glog"
 	"github.com/kataras/iris"
 )
 
-type modelModling struct {
+type inputModling struct {
+	EntId     string   `json:"ent_id"`
 	PurposeId string   `json:"purpose_id"`
 	PeriodIds []string `json:"period_ids"`
 	ModelIds  []string `json:"model_ids"`
@@ -25,45 +26,40 @@ type ModelController struct {
 }
 
 func (c *ModelController) GetModelingTest() results.Result {
-	fm_time := time.Now()
-	m := amibaModels.Modeling{}
-	m.EntId = c.Ctx.URLParam("ent")
-	m.PurposeId = c.Ctx.URLParam("purpose")
-	m.PeriodId = c.Ctx.URLParam("period")
-	m.ModelId = c.Ctx.URLParam("model")
-	_, err := c.Service.Modeling(m)
-
-	glog.Printf("建模:%s,time:%v Seconds", m, time.Now().Sub(fm_time).Seconds())
-	if err != nil {
-		return results.ToError(err)
-	} else {
-		return results.ToJson(results.Map{"data": true, "times": time.Now().Sub(fm_time).Seconds()})
+	m := inputModling{}
+	m.PurposeId = c.Ctx.URLParam("purpose_id")
+	if v := c.Ctx.URLParam("period_ids"); v != "" {
+		m.PeriodIds = []string{v}
 	}
+	if v := c.Ctx.URLParam("model_ids"); v != "" {
+		m.ModelIds = []string{v}
+	}
+	m.EntId = c.Ctx.URLParam("ent_id")
+	return c.handModeling(m)
 }
-func (c *ModelController) PostModeling() results.Result {
-	var m modelModling
-	if err := c.Ctx.ReadJSON(&m); err != nil {
-		return results.ToError(err)
+func (c *ModelController) handModeling(m inputModling) results.Result {
+	fm_time := time.Now()
+	ent, f := c.Service.GetEnt(m.EntId)
+	if !f {
+		return results.ToError(errors.New(fmt.Sprintf("企业参数错误:%s", m.EntId)))
 	}
-	entId := c.Ctx.Values().GetString("Ent")
 	if m.PeriodIds == nil || len(m.PeriodIds) == 0 {
 		return results.ToError(errors.New("缺少期间参数!"))
 	}
+	purpose, f := c.Service.GetPurpose(ent.Id, m.PurposeId)
+	if !f {
+		return results.ToError(errors.New(fmt.Sprintf("核算目的参数错误:%s", m.PurposeId)))
+	}
 	result := make(map[string]interface{})
-	if m.ModelIds != nil && len(m.ModelIds) > 0 {
-		for _, modelId := range m.ModelIds {
-			for _, periodId := range m.PeriodIds {
-				res, err := c.Service.Modeling(amibaModels.Modeling{EntId: entId, PurposeId: m.PurposeId, PeriodId: periodId, ModelId: modelId})
-				if err != nil {
-					result[modelId+":"+periodId] = err.Error()
-				} else {
-					result[modelId+":"+periodId] = res
-				}
-			}
-		}
-	} else if m.PeriodIds != nil && len(m.PeriodIds) > 0 {
+	if m.PeriodIds != nil && len(m.PeriodIds) > 0 {
 		for _, periodId := range m.PeriodIds {
-			res, err := c.Service.Modeling(amibaModels.Modeling{EntId: entId, PurposeId: m.PurposeId, PeriodId: periodId})
+			period, f := c.Service.GetPeriod(ent.Id, periodId)
+			if !f {
+				err := errors.New(fmt.Sprintf("企业:%v,找不到期间数据:%s", ent.Name, periodId))
+				glog.Printf("period data error :%s", err)
+				continue
+			}
+			res, err := c.Service.Modeling(ent, purpose, period, m.ModelIds)
 			if err != nil {
 				result[periodId] = err.Error()
 			} else {
@@ -71,5 +67,14 @@ func (c *ModelController) PostModeling() results.Result {
 			}
 		}
 	}
+	glog.Printf("企业:%v,核算目的:%v,期间:%v,模型:%v,time:%v Seconds", ent.Name, purpose.Name, m.PeriodIds, m.ModelIds, time.Now().Sub(fm_time).Seconds())
 	return results.ToJson(results.Map{"data": result})
+}
+func (c *ModelController) PostModeling() results.Result {
+	var m inputModling
+	if err := c.Ctx.ReadJSON(&m); err != nil {
+		return results.ToError(err)
+	}
+	m.EntId = c.Ctx.Values().GetString("Ent")
+	return c.handModeling(m)
 }

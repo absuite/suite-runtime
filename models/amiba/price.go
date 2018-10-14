@@ -20,4 +20,6 @@ type Price struct {
 
 	FmDate time.Time `xorm:"decimal 'fm_date'"`
 	ToDate time.Time `xorm:"decimal 'to_date'"`
+
+	CacheKey string
 }

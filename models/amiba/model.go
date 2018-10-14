@@ -5,6 +5,7 @@ type Model struct {
 	Code      string `xorm:"varchar(200) 'code'"`
 	Name      string `xorm:"varchar(200) 'name'"`
 	PurposeId string `xorm:"varchar(200) 'purpose_id'"`
+	Group     Group
 	GroupId   string `xorm:"varchar(200) 'group_id'"`
 
 	Lines []ModelLine
@@ -18,9 +19,11 @@ type ModelLine struct {
 	Id                 string `xorm:"varchar(200) 'id'"`
 	ModelId            string `xorm:"varchar(200) 'model_id'"`
 	PurposeId          string `xorm:"varchar(200) 'purpose_id'"`
+	Group              Group
 	GroupId            string `xorm:"varchar(200) 'group_id'"`
 	ElementId          string `xorm:"varchar(200) 'element_id'"`
 	MatchDirectionEnum string `xorm:"varchar(200) 'match_direction_enum'"`
+	MatchGroup         Group
 	MatchGroupId       string `xorm:"varchar(200) 'match_group_id'"`
 	BizTypeEnum        string `xorm:"varchar(200) 'biz_type_enum'"`
 	DocTypeId          string `xorm:"varchar(200) 'doc_type_id'"`
@@ -40,6 +43,7 @@ type ModelLine struct {
 	Factor5            string `xorm:"varchar(200) 'factor5'"`
 	ValueTypeEnum      string `xorm:"varchar(200) 'value_type_enum'"`
 	Adjust             string `xorm:"varchar(200) 'adjust'"`
+	ToGroup            Group
 	ToGroupId          string `xorm:"varchar(200) 'to_group_id'"`
 	PriceId            string `xorm:"varchar(200) 'price_id'"`
 }

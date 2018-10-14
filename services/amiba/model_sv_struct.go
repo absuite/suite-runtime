@@ -7,14 +7,6 @@ import (
 	"github.com/absuite/suite-runtime/models/cbo"
 )
 
-type tmlModelingLine struct {
-	EntId      string
-	Period     cboModels.Period
-	ModelLine  amibaModels.ModelLine
-	Group      amibaModels.Group
-	MatchGroup amibaModels.Group
-	AllGroups  []amibaModels.Group
-}
 type tmlDataElementing struct {
 	EntId     string
 	PurposeId string
@@ -75,3 +67,7 @@ type tmlDataElementing struct {
 
 	Deleted bool
 }
+
+//map[entId]map[purposeId]map[groupId]
+var model_sv_cache_groups map[string]map[string]map[string]amibaModels.Group = make(map[string]map[string]map[string]amibaModels.Group)
+var model_sv_cache_periods map[string]map[string]cboModels.Period = make(map[string]map[string]cboModels.Period)

@@ -1,7 +1,6 @@
 package amibaServices
 
 import (
-	"errors"
 	"fmt"
 	"time"
 
@@ -13,7 +12,7 @@ import (
 
 type PricelSv interface {
 	Cache(entId string, purposeId string) error
-	GetPrice(find PriceFind) (amibaModels.Price, error)
+	GetPrice(find PriceFind) (amibaModels.Price, bool, error)
 	CacheAll() error
 }
 type priceSv struct {
@@ -37,68 +36,57 @@ func NewPricelSv(repo *repositories.ModelRepo) PricelSv {
 	price_sv_cache = make(map[string]map[string]map[string][]amibaModels.Price)
 	return price_sv
 }
-func (s *priceSv) getPriceInList(find PriceFind, items []amibaModels.Price) (amibaModels.Price, bool) {
-	founds := [3]amibaModels.Price{}
+func (s *priceSv) getPriceInList(find PriceFind, findKey string, items []amibaModels.Price) (amibaModels.Price, bool) {
 	for _, p := range items {
 		if find.PriceId != "" && p.Id != find.PriceId { //按价表查询，非此价表的不查
+			continue
+		}
+		if p.CacheKey != findKey {
 			continue
 		}
 		if !find.Date.IsZero() && (find.Date.Unix() < p.FmDate.Unix() || find.Date.Unix() > p.ToDate.Unix()) { //数据在日期范围之外，则直接返回
 			continue
 		}
-		if p.FmGroupId == find.FmGroupId && p.ToGroupId == find.ToGroupId && p.ItemCode == find.ItemCode { //来源巴+去向巴+物料,如果匹配，则直接返回
-			founds[0] = p
-			break
-		}
-		if p.FmGroupId == find.FmGroupId && p.ToGroupId == "" && p.ItemCode == find.ItemCode { //来源巴+物料
-			founds[1] = p
-			continue
-		}
-		if p.FmGroupId == "" && p.ToGroupId == "" && p.ItemCode == find.ItemCode { //物料
-			founds[2] = p
-			continue
-		}
-	}
-	if founds[0].Id != "" {
-		return founds[0], true
-	} else if founds[1].Id != "" {
-		return founds[1], true
-	} else if founds[2].Id != "" {
-		return founds[2], true
+		return p, true
 	}
 	return amibaModels.Price{}, false
 }
-func (s *priceSv) GetPrice(find PriceFind) (amibaModels.Price, error) {
+func (s *priceSv) GetPrice(find PriceFind) (amibaModels.Price, bool, error) {
 	price := amibaModels.Price{CostPrice: 0}
 	items := s.GetCache(find.EntId, find.PurposeId)
-	if find.ItemCode == "" || find.FmGroupId == "" || items == nil {
-		return price, errors.New("没有找到价格!")
+	if items == nil || len(items) == 0 {
+		glog.Errorf("企业:%v,核算:%v,找不到价表数据", find.EntId, find.PurposeId)
+		return price, false, nil
+	}
+	if find.ItemCode == "" || find.FmGroupId == "" {
+		glog.Errorf("企业:%v,核算:%v,物料:%v,来源巴:%v,参数不符合,不能取价!", find.EntId, find.PurposeId, find.ItemCode, find.FmGroupId)
+		return price, false, nil
 	}
 	//1.来源巴+去向巴+物料
 	if find.FmGroupId != "" && find.ToGroupId != "" && find.ItemCode != "" {
 		findKey := s.getItemKey(find.FmGroupId, find.ToGroupId, find.ItemCode)
-		price, found := s.getPriceInList(find, items[findKey])
+		price, found := s.getPriceInList(find, findKey, items[findKey])
 		if found {
-			return price, nil
+			return price, true, nil
 		}
 	}
 	//2.来源巴+物料
 	if find.FmGroupId != "" && find.ItemCode != "" {
 		findKey := s.getItemKey(find.FmGroupId, "", find.ItemCode)
-		price, found := s.getPriceInList(find, items[findKey])
+		price, found := s.getPriceInList(find, findKey, items[findKey])
 		if found {
-			return price, nil
+			return price, true, nil
 		}
 	}
 	//3.物料
 	if find.ItemCode != "" {
 		findKey := s.getItemKey("", "", find.ItemCode)
-		price, found := s.getPriceInList(find, items[findKey])
+		price, found := s.getPriceInList(find, findKey, items[findKey])
 		if found {
-			return price, nil
+			return price, true, nil
 		}
 	}
-	return price, errors.New("没有找到价格!")
+	return price, false, nil
 }
 func (s *priceSv) GetCache(entId string, purposeId string) map[string][]amibaModels.Price {
 	e := price_sv_cache[entId]
@@ -174,18 +162,20 @@ func (s *priceSv) Cache(entId string, purposeId string) error {
 	cacheKey := ""
 	for _, item := range datas {
 		cacheKey = ""
-		if item.FmGroupId != "" && item.ToGroupId != "" && item.ItemCode != "" { //来源巴+去向巴+物料,如果匹配，则直接返回
+		if cacheKey == "" && item.FmGroupId != "" && item.ToGroupId != "" && item.ItemCode != "" { //来源巴+去向巴+物料,如果匹配，则直接返回
 			cacheKey = s.getItemKey(item.FmGroupId, item.ToGroupId, item.ItemCode)
 		}
-		if item.FmGroupId != "" && item.ToGroupId == "" && item.ItemCode != "" { //来源巴+物料
+		if cacheKey == "" && item.FmGroupId != "" && item.ToGroupId == "" && item.ItemCode != "" { //来源巴+物料
 			cacheKey = s.getItemKey(item.FmGroupId, item.ToGroupId, item.ItemCode)
 		}
-		if item.FmGroupId == "" && item.ToGroupId == "" && item.ItemCode != "" { //物料
+		if cacheKey == "" && item.FmGroupId == "" && item.ToGroupId == "" && item.ItemCode != "" { //物料
 			cacheKey = s.getItemKey(item.FmGroupId, item.ToGroupId, item.ItemCode)
 		}
 		if cacheKey == "" {
 			continue
 		}
+		item.CacheKey = cacheKey
+
 		if cacheItems[cacheKey] == nil {
 			cacheItems[cacheKey] = make([]amibaModels.Price, 0)
 		}
