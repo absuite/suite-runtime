@@ -17,14 +17,14 @@ func (s *modelSv) DtiLog_Init(ent cboModels.Ent, purpose amibaModels.Purpose, pe
 	}
 	dtiModeling.Succeed = 0
 	dtiModeling.Msg = "准备开始..."
-
+	dtiModeling.Status = 0
 	if dtiModeling.Id == "" {
 		dtiModeling.Id = utils.GUID()
 		if _, err := s.repo.Insert(&dtiModeling); err != nil {
 			glog.Errorf("企业:%v,核算:%v,期间:%v,创建模型日志错误,%s", ent.Name, purpose.Name, period.Name, err)
 		}
 	} else {
-		if _, err := s.repo.Id(dtiModeling.Id).Cols("start_time", "end_time", "Msg", "Succeed").Update(&dtiModeling); err != nil {
+		if _, err := s.repo.Id(dtiModeling.Id).Cols("start_time", "end_time", "Msg", "Succeed", "Status").Update(&dtiModeling); err != nil {
 			glog.Errorf("企业:%v,核算:%v,期间:%v,更新模型日志错误,%s", ent.Name, purpose.Name, period.Name, err)
 		}
 	}
@@ -38,14 +38,14 @@ func (s *modelSv) DtiLog_Begin(ent cboModels.Ent, purpose amibaModels.Purpose, p
 	dtiModeling.StartTime = time.Now()
 	dtiModeling.Succeed = 0
 	dtiModeling.Msg = "开始"
-
+	dtiModeling.Status = 1
 	if dtiModeling.Id == "" {
 		dtiModeling.Id = utils.GUID()
 		if _, err := s.repo.Insert(&dtiModeling); err != nil {
 			glog.Errorf("企业:%v,核算:%v,期间:%v,创建模型日志错误,%s", ent.Name, purpose.Name, period.Name, err)
 		}
 	} else {
-		if _, err := s.repo.Id(dtiModeling.Id).Cols("start_time", "end_time", "Msg", "Succeed").Update(&dtiModeling); err != nil {
+		if _, err := s.repo.Id(dtiModeling.Id).Cols("start_time", "end_time", "Msg", "Succeed", "Status").Update(&dtiModeling); err != nil {
 			glog.Errorf("企业:%v,核算:%v,期间:%v,更新模型日志错误,%s", ent.Name, purpose.Name, period.Name, err)
 		}
 	}
@@ -75,13 +75,14 @@ func (s *modelSv) DtiLog_Error(ent cboModels.Ent, purpose amibaModels.Purpose, p
 	dtiModeling.Msg = err.Error()
 	dtiModeling.EndTime = time.Now()
 	dtiModeling.Succeed = 0
+	dtiModeling.Status = 2
 	if dtiModeling.Id == "" {
 		dtiModeling.Id = utils.GUID()
 		if _, err := s.repo.Insert(&dtiModeling); err != nil {
 			glog.Errorf("企业:%v,核算:%v,期间:%v,创建模型日志错误,%s", ent.Name, purpose.Name, period.Name, err)
 		}
 	} else {
-		if _, err := s.repo.Id(dtiModeling.Id).Cols("Msg", "end_time", "Succeed").Update(&dtiModeling); err != nil {
+		if _, err := s.repo.Id(dtiModeling.Id).Cols("Msg", "end_time", "Succeed", "Status").Update(&dtiModeling); err != nil {
 			glog.Errorf("企业:%v,核算:%v,期间:%v,更新模型日志错误,%s", ent.Name, purpose.Name, period.Name, err)
 		}
 	}
@@ -94,13 +95,14 @@ func (s *modelSv) DtiLog_Success(ent cboModels.Ent, purpose amibaModels.Purpose,
 	dtiModeling.EndTime = time.Now()
 	dtiModeling.Succeed = 1
 	dtiModeling.Msg = "完成"
+	dtiModeling.Status = 2
 	if dtiModeling.Id == "" {
 		dtiModeling.Id = utils.GUID()
 		if _, err := s.repo.Insert(&dtiModeling); err != nil {
 			glog.Errorf("企业:%v,核算:%v,期间:%v,创建模型日志错误,%s", ent.Name, purpose.Name, period.Name, err)
 		}
 	} else {
-		if _, err := s.repo.Id(dtiModeling.Id).Cols("end_time", "Succeed", "Msg").Update(&dtiModeling); err != nil {
+		if _, err := s.repo.Id(dtiModeling.Id).Cols("end_time", "Succeed", "Msg", "Status").Update(&dtiModeling); err != nil {
 			glog.Errorf("企业:%v,核算:%v,期间:%v,更新模型日志错误,%s", ent.Name, purpose.Name, period.Name, err)
 		}
 	}
