@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ggoop/goutils/glog"
+
 	"github.com/absuite/suite-runtime/configs"
 	"github.com/absuite/suite-runtime/http/middleware"
 	"github.com/absuite/suite-runtime/http/routes"
@@ -45,7 +47,7 @@ func handleDb(app *iris.Application) *xorm.Engine {
 	str := config.FormatDSN()
 	orm, err := xorm.NewEngine("mysql", str)
 	if err != nil {
-		app.Logger().Fatalf("orm failed to initialized: %v", err)
+		glog.Errorf("orm failed to initialized: %v", err)
 	}
 	location, err := time.LoadLocation("Asia/Shanghai")
 	if err == nil {
@@ -55,7 +57,7 @@ func handleDb(app *iris.Application) *xorm.Engine {
 	// orm.ShowSQL(true)
 	orm.Logger().SetLevel(core.LOG_DEBUG)
 	if err := orm.Ping(); err != nil {
-		app.Logger().Fatalf("can not ping xorm: %v", err)
+		glog.Errorf("can not ping xorm: %v", err)
 	}
 	iris.RegisterOnInterrupt(func() {
 		orm.Close()

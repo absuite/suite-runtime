@@ -1,9 +1,9 @@
 package configs
 
 import (
-	"log"
 	"os"
 
+	"github.com/ggoop/goutils/glog"
 	"github.com/spf13/viper"
 )
 
@@ -44,7 +44,7 @@ func New() {
 	viper.AddConfigPath("./")
 	err := viper.ReadInConfig()
 	if err != nil {
-		log.Printf("Fatal error when reading %s config file:%s", cmdRoot, err)
+		glog.Errorf("Fatal error when reading %s config file:%s", cmdRoot, err)
 		os.Exit(1)
 	}
 
