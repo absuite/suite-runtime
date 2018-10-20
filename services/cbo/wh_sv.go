@@ -13,12 +13,13 @@ type WhSv interface {
 	FindByCode(entId string, code string) (cboModels.Wh, bool)
 }
 type whSv struct {
-	repo  *repositories.ModelRepo
-	cache map[string]map[string]cboModels.Wh
+	repo   *repositories.ModelRepo
+	cache  map[string]map[string]cboModels.Wh
+	cached map[string]bool
 }
 
 func NewWhSv(repo *repositories.ModelRepo) WhSv {
-	return &whSv{repo: repo, cache: make(map[string]map[string]cboModels.Wh)}
+	return &whSv{repo: repo, cache: make(map[string]map[string]cboModels.Wh), cached: make(map[string]bool)}
 
 }
 func (s *whSv) CacheAll() error {
@@ -41,13 +42,27 @@ func (s *whSv) Cache(entId string) error {
 		s.cache[entId]["id:"+item.Id] = item
 		s.cache[entId]["code:"+item.Id] = item
 	}
+	s.cached[entId] = true
 	return nil
 }
+func (s *whSv) beforeCacheGet(entId string) {
+	if !s.cached[entId] {
+		s.Cache(entId)
+	}
+}
 func (s *whSv) Get(entId string, id string) (cboModels.Wh, bool) {
+	if entId == "" || id == "" {
+		return cboModels.Wh{}, false
+	}
+	s.beforeCacheGet(entId)
 	v, f := s.cache[entId]["id:"+id]
 	return v, f
 }
 func (s *whSv) FindByCode(entId string, code string) (cboModels.Wh, bool) {
+	if entId == "" || code == "" {
+		return cboModels.Wh{}, false
+	}
+	s.beforeCacheGet(entId)
 	v, f := s.cache[entId]["code:"+code]
 	return v, f
 }

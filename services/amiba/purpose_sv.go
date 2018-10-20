@@ -13,12 +13,13 @@ type PurposeSv interface {
 	FindByCode(entId string, code string) (amibaModels.Purpose, bool)
 }
 type purposeSv struct {
-	repo  *repositories.ModelRepo
-	cache map[string]map[string]amibaModels.Purpose
+	repo   *repositories.ModelRepo
+	cache  map[string]map[string]amibaModels.Purpose
+	cached map[string]bool
 }
 
 func NewPurposeSv(repo *repositories.ModelRepo) PurposeSv {
-	return &purposeSv{repo: repo, cache: make(map[string]map[string]amibaModels.Purpose)}
+	return &purposeSv{repo: repo, cache: make(map[string]map[string]amibaModels.Purpose), cached: make(map[string]bool)}
 
 }
 func (s *purposeSv) CacheAll() error {
@@ -43,11 +44,24 @@ func (s *purposeSv) Cache(entId string) error {
 	}
 	return nil
 }
+func (s *purposeSv) beforeCacheGet(entId string) {
+	if !s.cached[entId] {
+		s.Cache(entId)
+	}
+}
 func (s *purposeSv) Get(entId string, id string) (amibaModels.Purpose, bool) {
+	if entId == "" || id == "" {
+		return amibaModels.Purpose{}, false
+	}
+	s.beforeCacheGet(entId)
 	v, f := s.cache[entId]["id:"+id]
 	return v, f
 }
 func (s *purposeSv) FindByCode(entId string, code string) (amibaModels.Purpose, bool) {
+	if entId == "" || code == "" {
+		return amibaModels.Purpose{}, false
+	}
+	s.beforeCacheGet(entId)
 	v, f := s.cache[entId]["code:"+code]
 	return v, f
 }

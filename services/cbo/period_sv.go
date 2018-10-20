@@ -12,12 +12,13 @@ type PeriodSv interface {
 	Get(entId string, id string) (cboModels.Period, bool)
 }
 type periodSv struct {
-	repo  *repositories.ModelRepo                `optional:"true"`
-	cache map[string]map[string]cboModels.Period `optional:"true"`
+	repo   *repositories.ModelRepo
+	cache  map[string]map[string]cboModels.Period
+	cached map[string]bool
 }
 
 func NewPeriodSv(repo *repositories.ModelRepo) PeriodSv {
-	return &periodSv{repo: repo, cache: make(map[string]map[string]cboModels.Period)}
+	return &periodSv{repo: repo, cache: make(map[string]map[string]cboModels.Period), cached: make(map[string]bool)}
 
 }
 func (s *periodSv) CacheAll() error {
@@ -40,9 +41,19 @@ func (s *periodSv) Cache(entId string) error {
 	for _, item := range items {
 		s.cache[entId]["id:"+item.Id] = item
 	}
+	s.cached[entId] = true
 	return nil
 }
+func (s *periodSv) beforeCacheGet(entId string) {
+	if !s.cached[entId] {
+		s.Cache(entId)
+	}
+}
 func (s *periodSv) Get(entId string, id string) (cboModels.Period, bool) {
+	if entId == "" || id == "" {
+		return cboModels.Period{}, false
+	}
+	s.beforeCacheGet(entId)
 	v, f := s.cache[entId]["id:"+id]
 	return v, f
 }

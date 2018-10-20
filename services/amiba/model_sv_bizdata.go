@@ -92,12 +92,24 @@ func (s *modelSv) getBizData(ent cboModels.Ent, purpose amibaModels.Purpose, per
 			DefFmGroupId: m.GroupId, DefToGroupId: m.ToGroupId, ElementId: m.ElementId, BizTypeEnum: m.BizTypeEnum,
 			ValueTypeEnum: m.ValueTypeEnum, Adjust: m.Adjust,
 			DataId: d.Id, DataType: "biz",
-			DataFmOrg: d.FmOrg, DataFmDept: d.FmDept, DataFmWork: d.FmWork, DataFmTeam: d.FmTeam, DataFmPerson: d.FmPerson,
-			DataToOrg: d.ToOrg, DataToDept: d.ToDept, DataToWork: d.ToWork, DataToTeam: d.ToTeam, DataToPerson: d.ToPerson,
-			DataTraderCode: d.Trader, DataItemCode: d.Item, DataItemCategoryCode: d.ItemCategory, DataProjectCode: d.Project, DataAccountCode: d.Account, DataUom: d.Uom, DataCurrency: d.Currency,
+			DataFmOrgCode: d.FmOrg, DataFmDeptCode: d.FmDept, DataFmWorkCode: d.FmWork, DataFmTeamCode: d.FmTeam, DataFmPersonCode: d.FmPerson,
+			DataToOrgCode: d.ToOrg, DataToDeptCode: d.ToDept, DataToWorkCode: d.ToWork, DataToTeamCode: d.ToTeam, DataToPersonCode: d.ToPerson,
+			DataTraderCode: d.Trader,
+			DataItemCode:   d.Item, DataItemCategoryCode: d.ItemCategory,
+			DataProjectCode: d.Project, DataUomCode: d.Uom, DataCurrencyCode: d.Currency,
 			DataQty: d.Qty, DataMoney: d.Money,
 		}
-		if err := s.model_sv_handTmlData(ent, purpose, period, &tml, m); err != nil {
+		if v, f := s.itemsv.FindByCode(ent.Id, tml.DataItemCode); f {
+			tml.DataItemId = v.Id
+		}
+		if v, f := s.traderSv.FindByCode(ent.Id, tml.DataTraderCode); f {
+			tml.DataTraderId = v.Id
+		}
+		if v, f := s.projectSv.FindByCode(ent.Id, tml.DataProjectCode); f {
+			tml.DataProjectId = v.Id
+		}
+
+		if err := s.priceData(ent, purpose, period, &tml, m); err != nil {
 			return nil, err
 		}
 		if !tml.Deleted {

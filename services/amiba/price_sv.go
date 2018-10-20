@@ -16,8 +16,9 @@ type PricelSv interface {
 	CacheAll() error
 }
 type priceSv struct {
-	repo  *repositories.ModelRepo
-	cache map[string]map[string]map[string][]amibaModels.Price
+	repo   *repositories.ModelRepo
+	cache  map[string]map[string]map[string][]amibaModels.Price
+	cached map[string]bool
 }
 type PriceFind struct {
 	EntId     string
@@ -30,7 +31,7 @@ type PriceFind struct {
 }
 
 func NewPricelSv(repo *repositories.ModelRepo) PricelSv {
-	return &priceSv{repo: repo, cache: make(map[string]map[string]map[string][]amibaModels.Price)}
+	return &priceSv{repo: repo, cache: make(map[string]map[string]map[string][]amibaModels.Price), cached: make(map[string]bool)}
 }
 func (s *priceSv) getPriceInList(find PriceFind, findKey string, items []amibaModels.Price) (amibaModels.Price, bool) {
 	for _, p := range items {
@@ -85,6 +86,7 @@ func (s *priceSv) GetPrice(find PriceFind) (amibaModels.Price, bool, error) {
 	return price, false, nil
 }
 func (s *priceSv) GetCache(entId string, purposeId string) map[string][]amibaModels.Price {
+	s.beforeCacheGet(entId, purposeId)
 	e := s.cache[entId]
 	if e == nil || len(e) == 0 {
 		return nil
@@ -113,7 +115,13 @@ func (s *priceSv) CacheAll() error {
 	}
 	return nil
 }
+func (s *priceSv) beforeCacheGet(entId string, purposeId string) {
+	if !s.cached[entId+purposeId] {
+		s.Cache(entId, purposeId)
+	}
+}
 func (s *priceSv) Cache(entId string, purposeId string) error {
+
 	datas := make([]amibaModels.Price, 0)
 
 	items := make([]amibaModels.Price, 0)
@@ -181,6 +189,8 @@ func (s *priceSv) Cache(entId string, purposeId string) error {
 		s.cache[entId] = make(map[string]map[string][]amibaModels.Price)
 	}
 	s.cache[entId][purposeId] = cacheItems
+
+	s.cached[entId+purposeId] = true
 
 	glog.Printf("缓存价表成功 %d 条：ent=%s,purpose=%s", len(datas), entId, purposeId)
 	return nil

@@ -13,12 +13,13 @@ type DeptSv interface {
 	FindByCode(entId string, code string) (cboModels.Dept, bool)
 }
 type deptSv struct {
-	repo  *repositories.ModelRepo
-	cache map[string]map[string]cboModels.Dept
+	repo   *repositories.ModelRepo
+	cache  map[string]map[string]cboModels.Dept
+	cached map[string]bool
 }
 
 func NewDeptSv(repo *repositories.ModelRepo) DeptSv {
-	return &deptSv{repo: repo, cache: make(map[string]map[string]cboModels.Dept)}
+	return &deptSv{repo: repo, cache: make(map[string]map[string]cboModels.Dept), cached: make(map[string]bool)}
 
 }
 func (s *deptSv) CacheAll() error {
@@ -41,13 +42,27 @@ func (s *deptSv) Cache(entId string) error {
 		s.cache[entId]["id:"+item.Id] = item
 		s.cache[entId]["code:"+item.Id] = item
 	}
+	s.cached[entId] = true
 	return nil
 }
+func (s *deptSv) beforeCacheGet(entId string) {
+	if !s.cached[entId] {
+		s.Cache(entId)
+	}
+}
 func (s *deptSv) Get(entId string, id string) (cboModels.Dept, bool) {
+	if entId == "" || id == "" {
+		return cboModels.Dept{}, false
+	}
+	s.beforeCacheGet(entId)
 	v, f := s.cache[entId]["id:"+id]
 	return v, f
 }
 func (s *deptSv) FindByCode(entId string, code string) (cboModels.Dept, bool) {
+	if entId == "" || code == "" {
+		return cboModels.Dept{}, false
+	}
+	s.beforeCacheGet(entId)
 	v, f := s.cache[entId]["code:"+code]
 	return v, f
 }

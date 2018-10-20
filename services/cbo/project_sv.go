@@ -13,12 +13,13 @@ type ProjectSv interface {
 	FindByCode(entId string, code string) (cboModels.Project, bool)
 }
 type projectSv struct {
-	repo  *repositories.ModelRepo
-	cache map[string]map[string]cboModels.Project
+	repo   *repositories.ModelRepo
+	cache  map[string]map[string]cboModels.Project
+	cached map[string]bool
 }
 
 func NewProjectSv(repo *repositories.ModelRepo) ProjectSv {
-	return &projectSv{repo: repo, cache: make(map[string]map[string]cboModels.Project)}
+	return &projectSv{repo: repo, cache: make(map[string]map[string]cboModels.Project), cached: make(map[string]bool)}
 
 }
 func (s *projectSv) CacheAll() error {
@@ -41,13 +42,27 @@ func (s *projectSv) Cache(entId string) error {
 		s.cache[entId]["id:"+item.Id] = item
 		s.cache[entId]["code:"+item.Id] = item
 	}
+	s.cached[entId] = true
 	return nil
 }
+func (s *projectSv) beforeCacheGet(entId string) {
+	if !s.cached[entId] {
+		s.Cache(entId)
+	}
+}
 func (s *projectSv) Get(entId string, id string) (cboModels.Project, bool) {
+	if entId == "" || id == "" {
+		return cboModels.Project{}, false
+	}
+	s.beforeCacheGet(entId)
 	v, f := s.cache[entId]["id:"+id]
 	return v, f
 }
 func (s *projectSv) FindByCode(entId string, code string) (cboModels.Project, bool) {
+	if entId == "" || code == "" {
+		return cboModels.Project{}, false
+	}
+	s.beforeCacheGet(entId)
 	v, f := s.cache[entId]["code:"+code]
 	return v, f
 }

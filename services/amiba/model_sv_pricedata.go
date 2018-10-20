@@ -10,31 +10,31 @@ import (
 	"github.com/absuite/suite-runtime/models/cbo"
 )
 
-func (s *modelSv) model_sv_handTmlData(ent cboModels.Ent, purpose amibaModels.Purpose, period cboModels.Period, d *tmlDataElementing, m amibaModels.ModelLine) error {
+func (s *modelSv) priceData(ent cboModels.Ent, purpose amibaModels.Purpose, period cboModels.Period, d *tmlDataElementing, m amibaModels.ModelLine) error {
 
 	//依据阿米巴定义找来源阿米巴
 	var fmGroup amibaModels.Group
 	var toGroup amibaModels.Group
-	if m.Group.TypeEnum == "org" && d.DataFmOrg != "" {
-		fmGroup, _ = s.groupSv.FindByLineCode(ent.Id, m.PurposeId, d.DataFmOrg)
+	if m.Group.TypeEnum == "org" && d.DataFmOrgCode != "" {
+		fmGroup, _ = s.groupSv.FindByLineCode(ent.Id, m.PurposeId, d.DataFmOrgCode)
 	}
-	if m.Group.TypeEnum == "dept" && d.DataFmDept != "" {
-		fmGroup, _ = s.groupSv.FindByLineCode(ent.Id, m.PurposeId, d.DataFmDept)
+	if m.Group.TypeEnum == "dept" && d.DataFmDeptCode != "" {
+		fmGroup, _ = s.groupSv.FindByLineCode(ent.Id, m.PurposeId, d.DataFmDeptCode)
 	}
-	if m.Group.TypeEnum == "work" && d.DataFmWork != "" {
-		fmGroup, _ = s.groupSv.FindByLineCode(ent.Id, m.PurposeId, d.DataFmWork)
+	if m.Group.TypeEnum == "work" && d.DataFmWorkCode != "" {
+		fmGroup, _ = s.groupSv.FindByLineCode(ent.Id, m.PurposeId, d.DataFmWorkCode)
 	}
 	if fmGroup.Id != "" {
 		d.DataFmGroupId = fmGroup.Id
 	}
-	if m.Group.TypeEnum == "org" && d.DataToOrg != "" {
-		toGroup, _ = s.groupSv.FindByLineCode(ent.Id, m.PurposeId, d.DataToOrg)
+	if m.Group.TypeEnum == "org" && d.DataToOrgCode != "" {
+		toGroup, _ = s.groupSv.FindByLineCode(ent.Id, m.PurposeId, d.DataToOrgCode)
 	}
-	if m.Group.TypeEnum == "dept" && d.DataToDept != "" {
-		toGroup, _ = s.groupSv.FindByLineCode(ent.Id, m.PurposeId, d.DataToDept)
+	if m.Group.TypeEnum == "dept" && d.DataToDeptCode != "" {
+		toGroup, _ = s.groupSv.FindByLineCode(ent.Id, m.PurposeId, d.DataToDeptCode)
 	}
-	if m.Group.TypeEnum == "work" && d.DataToWork != "" {
-		toGroup, _ = s.groupSv.FindByLineCode(ent.Id, m.PurposeId, d.DataToWork)
+	if m.Group.TypeEnum == "work" && d.DataToWorkCode != "" {
+		toGroup, _ = s.groupSv.FindByLineCode(ent.Id, m.PurposeId, d.DataToWorkCode)
 	}
 	if toGroup.Id != "" {
 		d.DataToGroupId = fmGroup.Id
@@ -117,76 +117,4 @@ func (s *modelSv) model_sv_handTmlData(ent cboModels.Ent, purpose amibaModels.Pu
 		return nil
 	}
 	return nil
-}
-
-/**
-* @api 获取模型集合
- */
-func (s *modelSv) GetModels(entId, purposeId string, modelIds []string) ([]amibaModels.Model, bool) {
-	results := make([]amibaModels.Model, 0)
-	query := s.repo.Select(`m.id,m.code,m.name,m.purpose_id,m.group_id`).Table("suite_amiba_modelings").Alias("m")
-	if modelIds != nil && len(modelIds) > 0 {
-		query.In("m.id", modelIds)
-	}
-	if purposeId != "" {
-		query.Where("m.purpose_id=?", purposeId)
-	}
-	if entId != "" {
-		query.Where("m.ent_id=?", entId)
-	}
-	if err := query.Find(&results); err != nil {
-		glog.Printf("query error :%s", err)
-		return nil, false
-	}
-	if len(results) == 0 {
-		glog.Printf("查询不到模型数据:ent_id=%v,purpose_id=%v,modelIds=%v", entId, purposeId, modelIds)
-		return results, false
-	}
-	resultLines := make([]amibaModels.ModelLine, 0)
-	query = s.repo.Select(`m.id as model_id,m.purpose_id,m.group_id,
-		ml.id as id,ml.element_id,ml.match_direction_enum,ml.match_group_id,
-		ml.biz_type_enum,ml.doc_type_id,ml.item_category_id,itemc.code as item_category_code,
-		ml.account_code,ml.project_code,
-		ml.trader_id,trader.code as trader_code,ml.item_id,item.code as item_code,ml.factor1,ml.factor2,ml.factor3,ml.factor4,ml.factor5,
-		ml.value_type_enum,ml.adjust,
-		ml.to_group_id,ml.price_id`).Table("suite_amiba_modelings").Alias("m")
-	query.Join("inner", []string{"suite_amiba_modeling_lines", "ml"}, "m.id=ml.modeling_id")
-	query.Join("left", []string{"suite_cbo_items", "item"}, "ml.item_id=item.id")
-	query.Join("left", []string{"suite_cbo_item_categories", "itemc"}, "itemc.id=ml.item_category_id")
-	query.Join("left", []string{"suite_cbo_traders", "trader"}, "ml.trader_id=trader.id")
-	if modelIds != nil && len(modelIds) > 0 {
-		query.In("m.id", modelIds)
-	}
-	if purposeId != "" {
-		query.Where("m.purpose_id=?", purposeId)
-	}
-	if entId != "" {
-		query.Where("m.ent_id=?", entId)
-	}
-	if err := query.Find(&resultLines); err != nil {
-		glog.Printf("query error :%s", err)
-		return nil, false
-	}
-	if len(resultLines) > 0 {
-		for i, item := range results {
-			if gv, f := s.groupSv.Get(entId, item.GroupId); f {
-				results[i].Group = gv
-			}
-			for _, lv := range resultLines {
-				if lv.ModelId == item.Id {
-					if gv, f := s.groupSv.Get(entId, lv.GroupId); f {
-						lv.Group = gv
-					}
-					if gv, f := s.groupSv.Get(entId, lv.ToGroupId); f {
-						lv.ToGroup = gv
-					}
-					if gv, f := s.groupSv.Get(entId, lv.MatchGroupId); f {
-						lv.MatchGroup = gv
-					}
-					results[i].AddLine(lv)
-				}
-			}
-		}
-	}
-	return results, true
 }

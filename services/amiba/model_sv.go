@@ -14,6 +14,67 @@ import (
 	"github.com/absuite/suite-runtime/repositories"
 )
 
+type tmlDataElementing struct {
+	EntId     string
+	PurposeId string
+	PeriodId  string
+	FmGroupId string //结果来源巴
+	ToGroupId string //结果目标巴
+
+	ModelingId         string //模型行ID
+	ModelingLineId     string //模型行ID
+	MatchDirectionEnum string
+	MatchGroupId       string //匹配方：与原始业务数据中的巴进行匹配，并将匹配结果作为表头巴的建模成果。
+	DefFmGroupId       string //模型头定义的巴
+	DefToGroupId       string //模型头定义的巴,交易方：标识表头巴的交易对方巴是谁，当交易方为空时，使用原始业务数据匹配的巴，如果指定了，则直接使用交易巴。
+
+	ElementId     string
+	BizTypeEnum   string //业务类型
+	ValueTypeEnum string
+	Adjust        string
+
+	DataId        string
+	DataType      string
+	DataFmGroupId string //业务数据来源对应的巴
+	DataToGroupId string //业务数据目标对应的巴
+
+	DataDocNo        string
+	DataDocDate      time.Time
+	DataFmOrgCode    string
+	DataFmDeptCode   string
+	DataFmWorkCode   string
+	DataFmTeamCode   string
+	DataFmWhCode     string
+	DataFmPersonCode string
+
+	DataToOrgCode    string
+	DataToDeptCode   string
+	DataToWorkCode   string
+	DataToTeamCode   string
+	DataToWhCode     string
+	DataToPersonCode string
+
+	DataTraderId         string
+	DataTraderCode       string
+	DataItemCode         string
+	DataItemId           string
+	DataItemCategoryCode string
+	DataItemCategoryId   string
+	DataProjectId        string
+	DataProjectCode      string
+	DataAccountCode      string
+	DataCurrencyCode     string
+	DataUomCode          string
+	DataQty              float64
+	DataMoney            float64
+
+	Qty   float64
+	Price float64
+	Money float64
+
+	Deleted bool
+}
+
 type ModelSv interface {
 	Modeling(ent cboModels.Ent, purpose amibaModels.Purpose, period cboModels.Period, modelIds []string) (bool, error)
 }
@@ -21,13 +82,15 @@ type modelSv struct {
 	repo      *repositories.ModelRepo
 	entSv     cboServices.EntSv
 	itemsv    cboServices.ItemSv
+	traderSv  cboServices.TraderSv
+	projectSv cboServices.ProjectSv
 	purposeSv PurposeSv
 	groupSv   GroupSv
 	pricelSv  PricelSv
 }
 
-func NewModelSv(repo *repositories.ModelRepo, entSv cboServices.EntSv, itemsv cboServices.ItemSv, purposeSv PurposeSv, groupSv GroupSv, pricelSv PricelSv) ModelSv {
-	return &modelSv{repo: repo, entSv: entSv, itemsv: itemsv, purposeSv: purposeSv, groupSv: groupSv, pricelSv: pricelSv}
+func NewModelSv(repo *repositories.ModelRepo, entSv cboServices.EntSv, itemsv cboServices.ItemSv, traderSv cboServices.TraderSv, projectSv cboServices.ProjectSv, purposeSv PurposeSv, groupSv GroupSv, pricelSv PricelSv) ModelSv {
+	return &modelSv{repo: repo, entSv: entSv, itemsv: itemsv, purposeSv: purposeSv, groupSv: groupSv, pricelSv: pricelSv, projectSv: projectSv, traderSv: traderSv}
 }
 func (s *modelSv) Modeling(ent cboModels.Ent, purpose amibaModels.Purpose, period cboModels.Period, modelIds []string) (bool, error) {
 	//获取期间数据
@@ -117,4 +180,76 @@ func (s *modelSv) Modeling(ent cboModels.Ent, purpose amibaModels.Purpose, perio
 	}
 	//获取业务数据
 	return true, nil
+}
+
+/**
+* @api 获取模型集合
+ */
+func (s *modelSv) GetModels(entId, purposeId string, modelIds []string) ([]amibaModels.Model, bool) {
+	results := make([]amibaModels.Model, 0)
+	query := s.repo.Select(`m.id,m.code,m.name,m.purpose_id,m.group_id`).Table("suite_amiba_modelings").Alias("m")
+	if modelIds != nil && len(modelIds) > 0 {
+		query.In("m.id", modelIds)
+	}
+	if purposeId != "" {
+		query.Where("m.purpose_id=?", purposeId)
+	}
+	if entId != "" {
+		query.Where("m.ent_id=?", entId)
+	}
+	if err := query.Find(&results); err != nil {
+		glog.Printf("query error :%s", err)
+		return nil, false
+	}
+	if len(results) == 0 {
+		glog.Printf("查询不到模型数据:ent_id=%v,purpose_id=%v,modelIds=%v", entId, purposeId, modelIds)
+		return results, false
+	}
+	resultLines := make([]amibaModels.ModelLine, 0)
+	query = s.repo.Select(`m.id as model_id,m.purpose_id,m.group_id,
+		ml.id as id,ml.element_id,ml.match_direction_enum,ml.match_group_id,
+		ml.biz_type_enum,ml.doc_type_id,ml.item_category_id,itemc.code as item_category_code,
+		ml.account_code,ml.project_code,
+		ml.trader_id,trader.code as trader_code,ml.item_id,item.code as item_code,ml.factor1,ml.factor2,ml.factor3,ml.factor4,ml.factor5,
+		ml.value_type_enum,ml.adjust,
+		ml.to_group_id,ml.price_id`).Table("suite_amiba_modelings").Alias("m")
+	query.Join("inner", []string{"suite_amiba_modeling_lines", "ml"}, "m.id=ml.modeling_id")
+	query.Join("left", []string{"suite_cbo_items", "item"}, "ml.item_id=item.id")
+	query.Join("left", []string{"suite_cbo_item_categories", "itemc"}, "itemc.id=ml.item_category_id")
+	query.Join("left", []string{"suite_cbo_traders", "trader"}, "ml.trader_id=trader.id")
+	if modelIds != nil && len(modelIds) > 0 {
+		query.In("m.id", modelIds)
+	}
+	if purposeId != "" {
+		query.Where("m.purpose_id=?", purposeId)
+	}
+	if entId != "" {
+		query.Where("m.ent_id=?", entId)
+	}
+	if err := query.Find(&resultLines); err != nil {
+		glog.Printf("query error :%s", err)
+		return nil, false
+	}
+	if len(resultLines) > 0 {
+		for i, item := range results {
+			if gv, f := s.groupSv.Get(entId, item.GroupId); f {
+				results[i].Group = gv
+			}
+			for _, lv := range resultLines {
+				if lv.ModelId == item.Id {
+					if gv, f := s.groupSv.Get(entId, lv.GroupId); f {
+						lv.Group = gv
+					}
+					if gv, f := s.groupSv.Get(entId, lv.ToGroupId); f {
+						lv.ToGroup = gv
+					}
+					if gv, f := s.groupSv.Get(entId, lv.MatchGroupId); f {
+						lv.MatchGroup = gv
+					}
+					results[i].AddLine(lv)
+				}
+			}
+		}
+	}
+	return results, true
 }

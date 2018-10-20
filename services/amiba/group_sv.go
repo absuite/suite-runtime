@@ -14,12 +14,13 @@ type GroupSv interface {
 	FindByLineCode(entId, purposeId, code string) (amibaModels.Group, bool)
 }
 type groupSv struct {
-	repo  *repositories.ModelRepo
-	cache map[string]map[string]amibaModels.Group
+	repo   *repositories.ModelRepo
+	cache  map[string]map[string]amibaModels.Group
+	cached map[string]bool
 }
 
 func NewGroupSv(repo *repositories.ModelRepo) GroupSv {
-	return &groupSv{repo: repo, cache: make(map[string]map[string]amibaModels.Group)}
+	return &groupSv{repo: repo, cache: make(map[string]map[string]amibaModels.Group), cached: make(map[string]bool)}
 
 }
 func (s *groupSv) CacheAll() error {
@@ -91,17 +92,35 @@ func (s *groupSv) Cache(entId string) error {
 			}
 		}
 	}
+	s.cached[entId] = true
 	return nil
 }
+func (s *groupSv) beforeCacheGet(entId string) {
+	if !s.cached[entId] {
+		s.Cache(entId)
+	}
+}
 func (s *groupSv) Get(entId string, id string) (amibaModels.Group, bool) {
+	if entId == "" || id == "" {
+		return amibaModels.Group{}, false
+	}
+	s.beforeCacheGet(entId)
 	v, f := s.cache[entId]["id:"+id]
 	return v, f
 }
 func (s *groupSv) FindByCode(entId, purposeId, code string) (amibaModels.Group, bool) {
+	if entId == "" || purposeId == "" || code == "" {
+		return amibaModels.Group{}, false
+	}
+	s.beforeCacheGet(entId)
 	v, f := s.cache[entId]["purpose:"+purposeId+"code:"+code]
 	return v, f
 }
 func (s *groupSv) FindByLineCode(entId, purposeId, code string) (amibaModels.Group, bool) {
+	if entId == "" || purposeId == "" || code == "" {
+		return amibaModels.Group{}, false
+	}
+	s.beforeCacheGet(entId)
 	v, f := s.cache[entId]["purpose:"+purposeId+"code:line:"+code]
 	return v, f
 }

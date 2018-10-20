@@ -87,8 +87,19 @@ func (s *modelSv) getFiData(ent cboModels.Ent, purpose amibaModels.Purpose, peri
 			DefFmGroupId: m.GroupId, DefToGroupId: m.ToGroupId, ElementId: m.ElementId, BizTypeEnum: m.BizTypeEnum,
 			ValueTypeEnum: m.ValueTypeEnum, Adjust: m.Adjust,
 			DataId: d.Id, DataType: "fi",
-			DataTraderCode: d.Trader, DataItemCode: d.Item, DataItemCategoryCode: d.ItemCategory, DataProjectCode: d.Project, DataAccountCode: d.Account, DataUom: d.Uom, DataCurrency: d.Currency,
+			DataTraderCode: d.Trader,
+			DataItemCode:   d.Item, DataItemCategoryCode: d.ItemCategory,
+			DataProjectCode: d.Project, DataAccountCode: d.Account, DataUomCode: d.Uom, DataCurrencyCode: d.Currency,
 			DataQty: d.Qty,
+		}
+		if v, f := s.itemsv.FindByCode(ent.Id, tml.DataItemCode); f {
+			tml.DataItemId = v.Id
+		}
+		if v, f := s.traderSv.FindByCode(ent.Id, tml.DataTraderCode); f {
+			tml.DataTraderId = v.Id
+		}
+		if v, f := s.projectSv.FindByCode(ent.Id, tml.DataProjectCode); f {
+			tml.DataProjectId = v.Id
 		}
 		if m.ValueTypeEnum == "debit" {
 			tml.DataMoney = d.DebitMoney
@@ -96,19 +107,19 @@ func (s *modelSv) getFiData(ent cboModels.Ent, purpose amibaModels.Purpose, peri
 			tml.DataMoney = d.CreditMoney
 		}
 		if m.MatchDirectionEnum == "fm" {
-			tml.DataFmOrg = d.FmOrg
-			tml.DataFmDept = d.FmDept
-			tml.DataFmWork = d.FmWork
-			tml.DataFmTeam = d.FmTeam
-			tml.DataFmPerson = d.FmPerson
+			tml.DataFmOrgCode = d.FmOrg
+			tml.DataFmDeptCode = d.FmDept
+			tml.DataFmWorkCode = d.FmWork
+			tml.DataFmTeamCode = d.FmTeam
+			tml.DataFmPersonCode = d.FmPerson
 		} else {
-			tml.DataToOrg = d.ToOrg
-			tml.DataToDept = d.ToDept
-			tml.DataToWork = d.ToWork
-			tml.DataToTeam = d.ToTeam
-			tml.DataToPerson = d.ToPerson
+			tml.DataToOrgCode = d.ToOrg
+			tml.DataToDeptCode = d.ToDept
+			tml.DataToWorkCode = d.ToWork
+			tml.DataToTeamCode = d.ToTeam
+			tml.DataToPersonCode = d.ToPerson
 		}
-		if err := s.model_sv_handTmlData(ent, purpose, period, &tml, m); err != nil {
+		if err := s.priceData(ent, purpose, period, &tml, m); err != nil {
 			return nil, err
 		}
 		if !tml.Deleted {
