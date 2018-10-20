@@ -1,6 +1,8 @@
 package cboServices
 
 import (
+	"time"
+
 	"github.com/absuite/suite-runtime/models/cbo"
 	"github.com/absuite/suite-runtime/repositories"
 	"github.com/ggoop/goutils/glog"
@@ -11,14 +13,19 @@ type ItemSv interface {
 	CacheAll() error
 	Get(entId string, id string) (cboModels.Item, bool)
 	FindByCode(entId string, code string) (cboModels.Item, bool)
+	GetTestId() int64
 }
 type itemSv struct {
-	repo  *repositories.ModelRepo
-	cache map[string]map[string]cboModels.Item
+	repo   *repositories.ModelRepo
+	cache  map[string]map[string]cboModels.Item
+	testId int64
 }
 
 func NewItemSv(repo *repositories.ModelRepo) ItemSv {
-	return &itemSv{repo: repo, cache: make(map[string]map[string]cboModels.Item)}
+	return &itemSv{repo: repo, cache: make(map[string]map[string]cboModels.Item), testId: time.Now().UnixNano()}
+}
+func (s *itemSv) GetTestId() int64 {
+	return s.testId
 }
 func (s *itemSv) CacheAll() error {
 	ents := s.repo.GetEnts()

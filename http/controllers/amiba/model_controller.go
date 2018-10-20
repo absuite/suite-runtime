@@ -7,6 +7,7 @@ import (
 
 	"github.com/absuite/suite-runtime/results"
 	"github.com/absuite/suite-runtime/services/amiba"
+	"github.com/absuite/suite-runtime/services/cbo"
 	"github.com/ggoop/goutils/glog"
 	"github.com/kataras/iris"
 )
@@ -19,10 +20,11 @@ type inputModling struct {
 	Memo      string   `json:"memo"`
 }
 type ModelController struct {
-	Ctx iris.Context
-	// Our MovieService, it's an interface which
-	// is binded from the main application.
-	Service amibaServices.ModelSv
+	Ctx       iris.Context
+	ModelSv   amibaServices.ModelSv
+	PurposeSv amibaServices.PurposeSv
+	EntSv     cboServices.EntSv
+	PeriodSv  cboServices.PeriodSv
 }
 
 func (c *ModelController) GetModelingTest() results.Result {
@@ -39,27 +41,27 @@ func (c *ModelController) GetModelingTest() results.Result {
 }
 func (c *ModelController) handModeling(m inputModling) results.Result {
 	fm_time := time.Now()
-	ent, f := c.Service.GetEnt(m.EntId)
+	ent, f := c.EntSv.Get(m.EntId)
 	if !f {
 		return results.ToError(errors.New(fmt.Sprintf("企业参数错误:%s", m.EntId)))
 	}
 	if m.PeriodIds == nil || len(m.PeriodIds) == 0 {
 		return results.ToError(errors.New("缺少期间参数!"))
 	}
-	purpose, f := c.Service.GetPurpose(ent.Id, m.PurposeId)
+	purpose, f := c.PurposeSv.Get(ent.Id, m.PurposeId)
 	if !f {
 		return results.ToError(errors.New(fmt.Sprintf("核算目的参数错误:%s", m.PurposeId)))
 	}
 	result := make(map[string]interface{})
 	if m.PeriodIds != nil && len(m.PeriodIds) > 0 {
 		for _, periodId := range m.PeriodIds {
-			period, f := c.Service.GetPeriod(ent.Id, periodId)
+			period, f := c.PeriodSv.Get(ent.Id, periodId)
 			if !f {
 				err := errors.New(fmt.Sprintf("企业:%v,找不到期间数据:%s", ent.Name, periodId))
 				glog.Printf("period data error :%s", err)
 				continue
 			}
-			res, err := c.Service.Modeling(ent, purpose, period, m.ModelIds)
+			res, err := c.ModelSv.Modeling(ent, purpose, period, m.ModelIds)
 			if err != nil {
 				result[periodId] = err.Error()
 			} else {

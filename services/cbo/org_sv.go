@@ -13,8 +13,8 @@ type OrgSv interface {
 	FindByCode(entId string, code string) (cboModels.Org, bool)
 }
 type orgSv struct {
-	repo  *repositories.ModelRepo
-	cache map[string]map[string]cboModels.Org
+	repo  *repositories.ModelRepo             `optional:"false"`
+	cache map[string]map[string]cboModels.Org `optional:"false"`
 }
 
 func NewOrgSv(repo *repositories.ModelRepo) OrgSv {

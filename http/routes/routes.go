@@ -1,15 +1,9 @@
 package routes
 
 import (
-	"github.com/go-xorm/xorm"
-	"github.com/kataras/iris"
+	"go.uber.org/dig"
 )
 
-type Context struct {
-	Orm *xorm.Engine
-	App *iris.Application
-}
-
-func Register(r *Context) {
-	registerAmiba(r)
+func Register(container *dig.Container) {
+	registerAmiba(container)
 }

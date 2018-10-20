@@ -12,8 +12,8 @@ type PeriodSv interface {
 	Get(entId string, id string) (cboModels.Period, bool)
 }
 type periodSv struct {
-	repo  *repositories.ModelRepo
-	cache map[string]map[string]cboModels.Period
+	repo  *repositories.ModelRepo                `optional:"true"`
+	cache map[string]map[string]cboModels.Period `optional:"true"`
 }
 
 func NewPeriodSv(repo *repositories.ModelRepo) PeriodSv {

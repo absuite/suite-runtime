@@ -11,7 +11,7 @@ import (
 )
 
 func (s *modelSv) DtiLog_Init(ent cboModels.Ent, purpose amibaModels.Purpose, period cboModels.Period, modelId string) {
-	dtiModeling := amibaModels.DtiModeling{EntId: ent.Id, PurposeId: purpose.ID, PeriodId: period.Id, ModelId: modelId}
+	dtiModeling := amibaModels.DtiModeling{EntId: ent.Id, PurposeId: purpose.Id, PeriodId: period.Id, ModelId: modelId}
 	if _, err := s.repo.Get(&dtiModeling); err != nil {
 		glog.Errorf("企业:%v,核算:%v,期间:%v,获取模型日志错误,%s", ent.Name, purpose.Name, period.Name, err)
 	}
@@ -31,7 +31,7 @@ func (s *modelSv) DtiLog_Init(ent cboModels.Ent, purpose amibaModels.Purpose, pe
 }
 
 func (s *modelSv) DtiLog_Begin(ent cboModels.Ent, purpose amibaModels.Purpose, period cboModels.Period, modelId string) {
-	dtiModeling := amibaModels.DtiModeling{EntId: ent.Id, PurposeId: purpose.ID, PeriodId: period.Id, ModelId: modelId}
+	dtiModeling := amibaModels.DtiModeling{EntId: ent.Id, PurposeId: purpose.Id, PeriodId: period.Id, ModelId: modelId}
 	if _, err := s.repo.Get(&dtiModeling); err != nil {
 		glog.Errorf("企业:%v,核算:%v,期间:%v,获取模型日志错误,%s", ent.Name, purpose.Name, period.Name, err)
 	}
@@ -51,7 +51,7 @@ func (s *modelSv) DtiLog_Begin(ent cboModels.Ent, purpose amibaModels.Purpose, p
 	}
 }
 func (s *modelSv) DtiLog_Log(ent cboModels.Ent, purpose amibaModels.Purpose, period cboModels.Period, modelId string, msg string) {
-	dtiModeling := amibaModels.DtiModeling{EntId: ent.Id, PurposeId: purpose.ID, PeriodId: period.Id, ModelId: modelId}
+	dtiModeling := amibaModels.DtiModeling{EntId: ent.Id, PurposeId: purpose.Id, PeriodId: period.Id, ModelId: modelId}
 	if _, err := s.repo.Get(&dtiModeling); err != nil {
 		glog.Errorf("企业:%v,核算:%v,期间:%v,获取模型日志错误,%s", ent.Name, purpose.Name, period.Name, err)
 	}
@@ -68,7 +68,7 @@ func (s *modelSv) DtiLog_Log(ent cboModels.Ent, purpose amibaModels.Purpose, per
 	}
 }
 func (s *modelSv) DtiLog_Error(ent cboModels.Ent, purpose amibaModels.Purpose, period cboModels.Period, modelId string, err error) {
-	dtiModeling := amibaModels.DtiModeling{EntId: ent.Id, PurposeId: purpose.ID, PeriodId: period.Id, ModelId: modelId}
+	dtiModeling := amibaModels.DtiModeling{EntId: ent.Id, PurposeId: purpose.Id, PeriodId: period.Id, ModelId: modelId}
 	if _, err := s.repo.Get(&dtiModeling); err != nil {
 		glog.Errorf("企业:%v,核算:%v,期间:%v,获取模型日志错误,%s", ent.Name, purpose.Name, period.Name, err)
 	}
@@ -88,7 +88,7 @@ func (s *modelSv) DtiLog_Error(ent cboModels.Ent, purpose amibaModels.Purpose, p
 	}
 }
 func (s *modelSv) DtiLog_Success(ent cboModels.Ent, purpose amibaModels.Purpose, period cboModels.Period, modelId string) {
-	dtiModeling := amibaModels.DtiModeling{EntId: ent.Id, PurposeId: purpose.ID, PeriodId: period.Id, ModelId: modelId}
+	dtiModeling := amibaModels.DtiModeling{EntId: ent.Id, PurposeId: purpose.Id, PeriodId: period.Id, ModelId: modelId}
 	if _, err := s.repo.Get(&dtiModeling); err != nil {
 		glog.Errorf("企业:%v,核算:%v,期间:%v,获取模型日志错误,%s", ent.Name, purpose.Name, period.Name, err)
 	}
@@ -111,7 +111,7 @@ func (s *modelSv) DtiLog_Success(ent cboModels.Ent, purpose amibaModels.Purpose,
 func (s *modelSv) DtiLog_Price(ent cboModels.Ent, purpose amibaModels.Purpose, period cboModels.Period, d tmlDataElementing, price amibaModels.Price, err error) error {
 	item := amibaModels.DtiModelingPrice{}
 	item.EntId = ent.Id
-	item.PurposeId = purpose.ID
+	item.PurposeId = purpose.Id
 	item.PeriodId = period.Id
 	item.ItemCode = d.DataItemCode
 	item.ItemId = d.DataItemId

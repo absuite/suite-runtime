@@ -1,7 +1,7 @@
 package amibaModels
 
 type Purpose struct {
-	ID    string `xorm:"varchar(200) 'id'"`
+	Id    string `xorm:"varchar(200) 'id'"`
 	EntId string `xorm:"varchar(200) 'ent_id'"`
 
 	Code       string `xorm:"varchar(200) 'code'"`

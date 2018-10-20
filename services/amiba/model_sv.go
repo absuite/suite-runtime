@@ -7,6 +7,7 @@ import (
 
 	"github.com/absuite/suite-runtime/models/amiba"
 	"github.com/absuite/suite-runtime/models/cbo"
+	"github.com/absuite/suite-runtime/services/cbo"
 
 	"github.com/ggoop/goutils/glog"
 
@@ -15,24 +16,25 @@ import (
 
 type ModelSv interface {
 	Modeling(ent cboModels.Ent, purpose amibaModels.Purpose, period cboModels.Period, modelIds []string) (bool, error)
-	GetPurpose(entId, purposeId string) (amibaModels.Purpose, bool)
-	GetPeriod(entId, periodId string) (cboModels.Period, bool)
-	GetEnt(entId string) (cboModels.Ent, bool)
 }
 type modelSv struct {
-	repo *repositories.ModelRepo
+	repo      *repositories.ModelRepo
+	entSv     cboServices.EntSv
+	itemsv    cboServices.ItemSv
+	purposeSv PurposeSv
+	groupSv   GroupSv
+	pricelSv  PricelSv
 }
 
-func NewModelSv(repo *repositories.ModelRepo) ModelSv {
-	return &modelSv{repo: repo}
+func NewModelSv(repo *repositories.ModelRepo, entSv cboServices.EntSv, itemsv cboServices.ItemSv, purposeSv PurposeSv, groupSv GroupSv, pricelSv PricelSv) ModelSv {
+	return &modelSv{repo: repo, entSv: entSv, itemsv: itemsv, purposeSv: purposeSv, groupSv: groupSv, pricelSv: pricelSv}
 }
-
 func (s *modelSv) Modeling(ent cboModels.Ent, purpose amibaModels.Purpose, period cboModels.Period, modelIds []string) (bool, error) {
 	//获取期间数据
 	fm_time = time.Now()
 	//获取模型数据
 	fm_time = time.Now()
-	models, f := s.GetModels(ent.Id, purpose.ID, modelIds)
+	models, f := s.GetModels(ent.Id, purpose.Id, modelIds)
 	if !f || len(models) == 0 {
 		err := errors.New(fmt.Sprintf("企业:%v,核算:%v,期间:%v,找不到模型数据,%v", ent.Name, purpose.Name, period.Name, modelIds))
 		glog.Printf("model data error :%s", err)
@@ -44,7 +46,7 @@ func (s *modelSv) Modeling(ent cboModels.Ent, purpose amibaModels.Purpose, perio
 
 		//删除取价日志
 		sql := "delete from `suite_amiba_dti_modeling_prices` where ent_id=? and purpose_id=? and period_id=? and model_id=?"
-		if _, err := s.repo.Exec(sql, ent.Id, purpose.ID, period.Id, m.Id); err != nil {
+		if _, err := s.repo.Exec(sql, ent.Id, purpose.Id, period.Id, m.Id); err != nil {
 			glog.Printf("企业:%v,核算:%v,期间:%v,删除取价日志错误:%s", ent.Name, purpose.Name, period.Name, err)
 		}
 	}

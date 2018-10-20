@@ -11,4 +11,3 @@ type IDCodeName struct {
 }
 
 var fm_time time.Time
-var to_time time.Time

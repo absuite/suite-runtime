@@ -16,25 +16,25 @@ func (s *modelSv) model_sv_handTmlData(ent cboModels.Ent, purpose amibaModels.Pu
 	var fmGroup amibaModels.Group
 	var toGroup amibaModels.Group
 	if m.Group.TypeEnum == "org" && d.DataFmOrg != "" {
-		fmGroup, _ = s.GetGroupByLineCode(ent.Id, m.PurposeId, d.DataFmOrg)
+		fmGroup, _ = s.groupSv.FindByLineCode(ent.Id, m.PurposeId, d.DataFmOrg)
 	}
 	if m.Group.TypeEnum == "dept" && d.DataFmDept != "" {
-		fmGroup, _ = s.GetGroupByLineCode(ent.Id, m.PurposeId, d.DataFmDept)
+		fmGroup, _ = s.groupSv.FindByLineCode(ent.Id, m.PurposeId, d.DataFmDept)
 	}
 	if m.Group.TypeEnum == "work" && d.DataFmWork != "" {
-		fmGroup, _ = s.GetGroupByLineCode(ent.Id, m.PurposeId, d.DataFmWork)
+		fmGroup, _ = s.groupSv.FindByLineCode(ent.Id, m.PurposeId, d.DataFmWork)
 	}
 	if fmGroup.Id != "" {
 		d.DataFmGroupId = fmGroup.Id
 	}
 	if m.Group.TypeEnum == "org" && d.DataToOrg != "" {
-		toGroup, _ = s.GetGroupByLineCode(ent.Id, m.PurposeId, d.DataToOrg)
+		toGroup, _ = s.groupSv.FindByLineCode(ent.Id, m.PurposeId, d.DataToOrg)
 	}
 	if m.Group.TypeEnum == "dept" && d.DataToDept != "" {
-		toGroup, _ = s.GetGroupByLineCode(ent.Id, m.PurposeId, d.DataToDept)
+		toGroup, _ = s.groupSv.FindByLineCode(ent.Id, m.PurposeId, d.DataToDept)
 	}
 	if m.Group.TypeEnum == "work" && d.DataToWork != "" {
-		toGroup, _ = s.GetGroupByLineCode(ent.Id, m.PurposeId, d.DataToWork)
+		toGroup, _ = s.groupSv.FindByLineCode(ent.Id, m.PurposeId, d.DataToWork)
 	}
 	if toGroup.Id != "" {
 		d.DataToGroupId = fmGroup.Id
@@ -83,7 +83,7 @@ func (s *modelSv) model_sv_handTmlData(ent cboModels.Ent, purpose amibaModels.Pu
 			return nil
 		}
 		/*如果取数量，则需要从价表里取单价*/
-		price, f, err := price_sv.GetPrice(PriceFind{EntId: d.EntId, PurposeId: d.PurposeId, PriceId: m.PriceId, FmGroupId: d.FmGroupId, ToGroupId: d.ToGroupId, ItemCode: d.DataItemCode, Date: d.DataDocDate})
+		price, f, err := s.pricelSv.GetPrice(PriceFind{EntId: d.EntId, PurposeId: d.PurposeId, PriceId: m.PriceId, FmGroupId: d.FmGroupId, ToGroupId: d.ToGroupId, ItemCode: d.DataItemCode, Date: d.DataDocDate})
 		if err != nil {
 			s.DtiLog_Price(ent, purpose, period, *d, price, err)
 			d.Deleted = true
@@ -117,196 +117,6 @@ func (s *modelSv) model_sv_handTmlData(ent cboModels.Ent, purpose amibaModels.Pu
 		return nil
 	}
 	return nil
-}
-func (s *modelSv) CachePeriods(entId string) error {
-	if model_sv_cache_periods[entId] == nil {
-		model_sv_cache_periods[entId] = make(map[string]cboModels.Period)
-	}
-	periods := make([]cboModels.Period, 0)
-	query := s.repo.Select("c.type_enum,c.id as calendar_id,p.id,p.code,p.name,p.year,p.from_date,p.to_date").Table("suite_cbo_period_calendars").Alias("c")
-	query.Join("inner", []string{"suite_cbo_period_accounts", "p"}, "c.id=p.calendar_id")
-	query.Where("p.ent_id = ? ", entId)
-	if err := query.Find(&periods); err != nil {
-		glog.Printf("query error :%s", err)
-		return err
-	}
-	for i, item := range periods {
-		model_sv_cache_periods[entId][item.Id] = periods[i]
-	}
-	return nil
-}
-
-/**
-*获取核算
- */
-func (s *modelSv) GetEnt(entId string) (cboModels.Ent, bool) {
-	m := cboModels.Ent{}
-	query := s.repo.Select("c.id,c.code,c.name").Table("gmf_sys_ents").Alias("c")
-	query.Where("c.id=?", entId)
-	has, err := query.Get(&m)
-	if err != nil {
-		glog.Printf("query error :%s", err)
-		return cboModels.Ent{}, false
-	}
-	return m, has
-}
-
-/**
-*获取核算
- */
-func (s *modelSv) GetPurpose(entId, purposeId string) (amibaModels.Purpose, bool) {
-	m := amibaModels.Purpose{}
-	query := s.repo.Select("c.id,c.code,c.name").Table("suite_amiba_purposes").Alias("c")
-	query.Where("c.ent_id = ? and c.id=?", entId, purposeId)
-	has, err := query.Get(&m)
-	if err != nil {
-		glog.Printf("query error :%s", err)
-		return amibaModels.Purpose{}, false
-	}
-	return m, has
-}
-
-/**
-* @api 获取期间集合
- */
-func (s *modelSv) GetPeriod(entId, periodId string) (cboModels.Period, bool) {
-	_, ok := model_sv_cache_periods[entId]
-	if !ok {
-		s.CachePeriods(entId)
-		if _, ok := model_sv_cache_periods[entId]; !ok {
-			return cboModels.Period{}, false
-		}
-	}
-	if v, ok := model_sv_cache_periods[entId][periodId]; ok {
-		return v, ok
-	}
-	return cboModels.Period{}, false
-}
-
-func (s *modelSv) CacheGroups(entId, purposeId string) error {
-	if model_sv_cache_groups[entId] == nil {
-		model_sv_cache_groups[entId] = make(map[string]map[string]amibaModels.Group)
-	}
-	model_sv_cache_groups[entId][purposeId] = make(map[string]amibaModels.Group)
-
-	groups := make([]amibaModels.Group, 0)
-	query := s.repo.Select("g.id,g.code,g.name,g.type_enum").Table("suite_amiba_groups").Alias("g")
-	query.Where("g.purpose_id = ? and g.ent_id = ? ", purposeId, entId)
-	if err := query.Find(&groups); err != nil {
-		glog.Printf("query error :%s", err)
-		return err
-	}
-	if len(groups) == 0 {
-		return nil
-	}
-	groupData := make([]amibaModels.GroupData, 0)
-	groupDataItem := make([]amibaModels.GroupData, 0)
-
-	query = s.repo.Select("g.id as group_id,g.type_enum as type_enum,d.id,d.code,d.name").Table("suite_amiba_groups").Alias("g")
-	query.Join("inner", []string{"suite_amiba_group_lines", "gl"}, "g.id=gl.group_id")
-	query.Join("inner", []string{"suite_cbo_orgs", "d"}, "gl.data_id=d.id").Where("g.type_enum=?", "org")
-	if err := query.Find(&groupDataItem); err != nil {
-		glog.Printf("query error :%s", err)
-		return err
-	}
-	if len(groupDataItem) > 0 {
-		groupData = append(groupData, groupDataItem...)
-	}
-
-	query = s.repo.Select("g.id as group_id,g.type_enum as type_enum,d.id,d.code,d.name").Table("suite_amiba_groups").Alias("g")
-	query.Join("inner", []string{"suite_amiba_group_lines", "gl"}, "g.id=gl.group_id")
-	query.Join("inner", []string{"suite_cbo_depts", "d"}, "gl.data_id=d.id").Where("g.type_enum=?", "dept")
-	if err := query.Find(&groupDataItem); err != nil {
-		glog.Printf("query error :%s", err)
-		return err
-	}
-	if len(groupDataItem) > 0 {
-		groupData = append(groupData, groupDataItem...)
-	}
-
-	query = s.repo.Select("g.id as group_id,g.type_enum as type_enum,d.id,d.code,d.name").Table("suite_amiba_groups").Alias("g")
-	query.Join("inner", []string{"suite_amiba_group_lines", "gl"}, "g.id=gl.group_id")
-	query.Join("inner", []string{"suite_cbo_works", "d"}, "gl.data_id=d.id").Where("g.type_enum=?", "work")
-	if err := query.Find(&groupDataItem); err != nil {
-		glog.Printf("query error :%s", err)
-		return err
-	}
-	if len(groupDataItem) > 0 {
-		groupData = append(groupData, groupDataItem...)
-	}
-	if len(groupData) > 0 {
-		for gi, gv := range groups {
-			for _, vv := range groupData {
-				if gv.Id == vv.GroupId {
-					groups[gi].AddData(vv)
-				}
-			}
-		}
-	}
-	for i, group := range groups {
-		model_sv_cache_groups[entId][purposeId][group.Id] = groups[i]
-	}
-	return nil
-}
-
-/**
-* @api 获取阿米巴集合
- */
-func (s *modelSv) GetGroups(entId, purposeId string) ([]amibaModels.Group, bool) {
-	if model_sv_cache_groups[entId] == nil || model_sv_cache_groups[entId][purposeId] == nil {
-		s.CacheGroups(entId, purposeId)
-		if model_sv_cache_groups[entId] == nil || model_sv_cache_groups[entId][purposeId] == nil {
-			return nil, false
-		}
-	}
-	items := make([]amibaModels.Group, 0)
-	maps := model_sv_cache_groups[entId][purposeId]
-	if len(maps) > 0 {
-		for _, m := range maps {
-			items = append(items, m)
-		}
-	}
-	return items, len(items) > 0
-}
-
-/**
-* @api 获取阿米巴
- */
-func (s *modelSv) GetGroup(entId, purposeId, groupId string) (amibaModels.Group, bool) {
-	if groupId == "" || entId == "" || purposeId == "" {
-		return amibaModels.Group{}, false
-	}
-	if model_sv_cache_groups[entId] == nil || model_sv_cache_groups[entId][purposeId] == nil {
-		s.CacheGroups(entId, purposeId)
-		if model_sv_cache_groups[entId] == nil || model_sv_cache_groups[entId][purposeId] == nil {
-			return amibaModels.Group{}, false
-		}
-	}
-	return model_sv_cache_groups[entId][purposeId][groupId], true
-}
-
-/**
-* @api 通过数据组成获取阿米巴集合
- */
-func (s *modelSv) GetGroupByLineCode(entId, purposeId, code string) (amibaModels.Group, bool) {
-	if code == "" || entId == "" || purposeId == "" {
-		return amibaModels.Group{}, false
-	}
-	groups, f := s.GetGroups(entId, purposeId)
-	if !f {
-		return amibaModels.Group{}, false
-	}
-	for _, g := range groups {
-		if g.Datas == nil || len(g.Datas) == 0 {
-			continue
-		}
-		for _, d := range g.Datas {
-			if d.Code == code {
-				return g, true
-			}
-		}
-	}
-	return amibaModels.Group{}, false
 }
 
 /**
@@ -359,18 +169,18 @@ func (s *modelSv) GetModels(entId, purposeId string, modelIds []string) ([]amiba
 	}
 	if len(resultLines) > 0 {
 		for i, item := range results {
-			if gv, f := s.GetGroup(entId, purposeId, item.GroupId); f {
+			if gv, f := s.groupSv.Get(entId, item.GroupId); f {
 				results[i].Group = gv
 			}
 			for _, lv := range resultLines {
 				if lv.ModelId == item.Id {
-					if gv, f := s.GetGroup(entId, purposeId, lv.GroupId); f {
+					if gv, f := s.groupSv.Get(entId, lv.GroupId); f {
 						lv.Group = gv
 					}
-					if gv, f := s.GetGroup(entId, purposeId, lv.ToGroupId); f {
+					if gv, f := s.groupSv.Get(entId, lv.ToGroupId); f {
 						lv.ToGroup = gv
 					}
-					if gv, f := s.GetGroup(entId, purposeId, lv.MatchGroupId); f {
+					if gv, f := s.groupSv.Get(entId, lv.MatchGroupId); f {
 						lv.MatchGroup = gv
 					}
 					results[i].AddLine(lv)

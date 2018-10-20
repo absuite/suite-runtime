@@ -16,7 +16,8 @@ type PricelSv interface {
 	CacheAll() error
 }
 type priceSv struct {
-	repo *repositories.ModelRepo
+	repo  *repositories.ModelRepo
+	cache map[string]map[string]map[string][]amibaModels.Price
 }
 type PriceFind struct {
 	EntId     string
@@ -28,13 +29,8 @@ type PriceFind struct {
 	Date      time.Time
 }
 
-var price_sv *priceSv
-var price_sv_cache map[string]map[string]map[string][]amibaModels.Price
-
 func NewPricelSv(repo *repositories.ModelRepo) PricelSv {
-	price_sv = &priceSv{repo: repo}
-	price_sv_cache = make(map[string]map[string]map[string][]amibaModels.Price)
-	return price_sv
+	return &priceSv{repo: repo, cache: make(map[string]map[string]map[string][]amibaModels.Price)}
 }
 func (s *priceSv) getPriceInList(find PriceFind, findKey string, items []amibaModels.Price) (amibaModels.Price, bool) {
 	for _, p := range items {
@@ -89,7 +85,7 @@ func (s *priceSv) GetPrice(find PriceFind) (amibaModels.Price, bool, error) {
 	return price, false, nil
 }
 func (s *priceSv) GetCache(entId string, purposeId string) map[string][]amibaModels.Price {
-	e := price_sv_cache[entId]
+	e := s.cache[entId]
 	if e == nil || len(e) == 0 {
 		return nil
 	}
@@ -104,7 +100,7 @@ func (s *priceSv) getItemKey(FmGroupId string, ToGroupId string, ItemCode string
 }
 func (s *priceSv) CacheAll() error {
 	items := make([]amibaModels.Purpose, 0)
-	query := price_sv.repo.Select(`p.id,p.code,p.name,p.ent_id,p.calendar_id`)
+	query := s.repo.Select(`p.id,p.code,p.name,p.ent_id,p.calendar_id`)
 	query.Table("suite_amiba_purposes").Alias("p")
 	if err := query.Find(&items); err != nil {
 		glog.Printf("query error :%s", err)
@@ -112,7 +108,7 @@ func (s *priceSv) CacheAll() error {
 	}
 	if items != nil && len(items) > 0 {
 		for _, v := range items {
-			s.Cache(v.EntId, v.ID)
+			s.Cache(v.EntId, v.Id)
 		}
 	}
 	return nil
@@ -121,7 +117,7 @@ func (s *priceSv) Cache(entId string, purposeId string) error {
 	datas := make([]amibaModels.Price, 0)
 
 	items := make([]amibaModels.Price, 0)
-	query := price_sv.repo.Select(`
+	query := s.repo.Select(`
 		p.id,p.code,p.name,p.purpose_id,p.group_id as fm_group_id,
 		pl.fm_date,pl.to_date,pl.group_id as to_group_id,pl.item_id,item.code as item_code,pl.cost_price
 	`)
@@ -140,7 +136,7 @@ func (s *priceSv) Cache(entId string, purposeId string) error {
 	}
 
 	items = make([]amibaModels.Price, 0)
-	query = price_sv.repo.Select(`
+	query = s.repo.Select(`
 		ph.id,ph.code,ph.name,p.purpose_id,ph.group_id as fm_group_id,
 		pl.fm_date,pl.to_date,pl.group_id as to_group_id,pl.item_id,item.code as item_code,pl.cost_price
 	`)
@@ -181,10 +177,10 @@ func (s *priceSv) Cache(entId string, purposeId string) error {
 		}
 		cacheItems[cacheKey] = append(cacheItems[cacheKey], item)
 	}
-	if price_sv_cache[entId] == nil {
-		price_sv_cache[entId] = make(map[string]map[string][]amibaModels.Price)
+	if s.cache[entId] == nil {
+		s.cache[entId] = make(map[string]map[string][]amibaModels.Price)
 	}
-	price_sv_cache[entId][purposeId] = cacheItems
+	s.cache[entId][purposeId] = cacheItems
 
 	glog.Printf("缓存价表成功 %d 条：ent=%s,purpose=%s", len(datas), entId, purposeId)
 	return nil
