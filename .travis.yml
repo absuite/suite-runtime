@@ -17,17 +17,19 @@ after_success:
   - go get github.com/kataras/iris
   - go get go.uber.org/dig
   - go get github.com/360EntSecGroup-Skylar/excelize
+  - go get github.com/kardianos/service
+  - go get github.com/ggoop/goutils
 
 before_deploy:
   - mkdir release
-  - GOARCH=386 GOOS=windows go build -o gmf-db-proxy.exe && zip release/gmf-db-proxy-windows-86.zip gmf-db-proxy.exe config.yaml
-  - GOARCH=amd64 GOOS=windows go build -o gmf-db-proxy.exe && zip release/gmf-db-proxy-windows-64.zip gmf-db-proxy.exe config.yaml
+  - GOARCH=386 GOOS=windows go build -o suite-runtime.exe && zip release/suite-runtime-windows-86.zip suite-runtime.exe config.yaml
+  - GOARCH=amd64 GOOS=windows go build -o suite-runtime.exe && zip release/suite-runtime-windows-64.zip suite-runtime.exe config.yaml
 deploy:
   provider: releases
   api_key: $GITHUB_TOKEN
   file: 
-    - "release/gmf-db-proxy-windows-86.zip"
-    - "release/gmf-db-proxy-windows-64.zip"
+    - "release/suite-runtime-windows-86.zip"
+    - "release/suite-runtime-windows-64.zip"
   skip_cleanup: true
   on:
     tags: true
