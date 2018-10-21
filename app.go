@@ -1,9 +1,7 @@
 package main
 
 import (
-	"context"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/absuite/suite-runtime/configs"
@@ -16,39 +14,13 @@ import (
 	"github.com/go-sql-driver/mysql"
 	"github.com/go-xorm/core"
 	"github.com/go-xorm/xorm"
-	"github.com/kardianos/service"
 	"github.com/kataras/iris"
 	"github.com/kataras/iris/middleware/logger"
 	"github.com/kataras/iris/middleware/recover"
 	"go.uber.org/dig"
 )
 
-type program struct {
-	cfg *service.Config
-	app *iris.Application
-}
-
-func (p *program) Start(s service.Service) error {
-	glog.Info("Start  server")
-	go p.run()
-	return nil
-}
-func (p *program) Stop(s service.Service) error {
-	glog.Info("Stop  server")
-	return p.app.Shutdown(context.Background())
-}
-func (p *program) run() {
-	glog.Info("Run  server")
-	// 代码写在这儿
-	if err := p.app.Run(iris.Addr(":"+configs.Default.App.Port), iris.WithConfiguration(iris.YAML(utils.JoinCurrentPath("env/iris.yaml")))); err != nil {
-		glog.Errorf("Run service error:%s\n", err.Error())
-	}
-}
-func RegisterSv() {
-	//设置日志目录
-	glog.SetPath(utils.JoinCurrentPath("storage/logs"))
-	//创建默认配置
-	configs.New()
+func runApp() {
 	//创建应用
 	app := iris.New()
 	app.Use(recover.New())
@@ -67,36 +39,8 @@ func RegisterSv() {
 	//路由注册
 	routes.Register(container)
 	//启动服务
-	//app.Run(iris.Addr(":"+configs.Default.App.Port), iris.WithConfiguration(iris.YAML("./env/iris.yaml")))
-
-	var s = &program{app: app, cfg: &service.Config{
-		Name:        "SuiteRuntime",
-		DisplayName: "Suite Runtime Service",
-		Description: "This is a service for suite.",
-	}}
-	sys := service.ChosenSystem()
-	srv, err := sys.New(s, s.cfg)
-	if err != nil {
-		glog.Fatalf("Init service error:%s\n", err.Error())
-	}
-	if len(os.Args) > 1 {
-		switch os.Args[1] {
-		case "install":
-			err := srv.Install()
-			if err != nil {
-				glog.Fatalf("Install service error:%s\n", err.Error())
-			}
-		case "uninstall":
-			err := srv.Uninstall()
-			if err != nil {
-				glog.Fatalf("Uninstall service error:%s\n", err.Error())
-			}
-		}
-		return
-	}
-	err = srv.Run()
-	if err != nil {
-		glog.Fatalf("Run programe error:%s\n", err.Error())
+	if err := app.Run(iris.Addr(":"+configs.Default.App.Port), iris.WithConfiguration(iris.YAML(utils.JoinCurrentPath("env/iris.yaml")))); err != nil {
+		glog.Errorf("Run service error:%s\n", err.Error())
 	}
 }
 
