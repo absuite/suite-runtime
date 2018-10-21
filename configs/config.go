@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/ggoop/goutils/glog"
+	"github.com/ggoop/goutils/utils"
 	"github.com/spf13/viper"
 )
 
@@ -40,8 +41,7 @@ var Default Config
 func New() {
 	viper.SetConfigType("yaml")
 	viper.SetConfigName(cmdRoot)
-	viper.AddConfigPath("./env")
-	viper.AddConfigPath("./")
+	viper.AddConfigPath(utils.JoinCurrentPath("env"))
 	err := viper.ReadInConfig()
 	if err != nil {
 		glog.Errorf("Fatal error when reading %s config file:%s", cmdRoot, err)
